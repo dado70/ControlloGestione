@@ -1,0 +1,174 @@
+/* GestHotel FE - Stili personalizzati Bootstrap 5 */
+
+:root {
+  --gh-sidebar-width: 240px;
+  --gh-sidebar-bg:    #1e293b;
+  --gh-sidebar-color: #cbd5e1;
+  --gh-sidebar-hover: #334155;
+  --gh-primary:       #2563eb;
+  --gh-success:       #16a34a;
+  --gh-warning:       #d97706;
+  --gh-danger:        #dc2626;
+}
+
+/* Layout principale */
+body {
+  background: #f1f5f9;
+  font-size: .92rem;
+}
+
+/* Sidebar */
+#sidebar {
+  width: var(--gh-sidebar-width);
+  min-height: 100vh;
+  background: var(--gh-sidebar-bg);
+  color: var(--gh-sidebar-color);
+  position: fixed;
+  top: 0; left: 0;
+  z-index: 100;
+  overflow-y: auto;
+  transition: width .2s ease;
+}
+#sidebar .sidebar-brand {
+  padding: 1.2rem 1rem;
+  border-bottom: 1px solid #334155;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+#sidebar .sidebar-brand small {
+  font-size: .65rem;
+  font-weight: 400;
+  opacity: .7;
+  display: block;
+}
+#sidebar .nav-section {
+  padding: .8rem 1rem .3rem;
+  font-size: .7rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: #64748b;
+  font-weight: 600;
+}
+#sidebar .nav-link {
+  color: var(--gh-sidebar-color);
+  padding: .5rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  border-radius: .25rem;
+  margin: 1px 6px;
+  font-size: .88rem;
+  transition: background .15s;
+}
+#sidebar .nav-link:hover,
+#sidebar .nav-link.active {
+  background: var(--gh-sidebar-hover);
+  color: #f8fafc;
+}
+#sidebar .nav-link i { width: 1.1rem; text-align: center; opacity: .8; }
+#sidebar .nav-link.active i { opacity: 1; }
+
+/* Contenuto principale */
+#main {
+  margin-left: var(--gh-sidebar-width);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header top */
+#topbar {
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  padding: .6rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+#topbar .topbar-title {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 1rem;
+}
+#topbar .azienda-selector {
+  font-size: .85rem;
+}
+
+/* Contenuto pagina */
+.page-content {
+  padding: 1.5rem;
+  flex: 1;
+}
+
+/* Cards KPI */
+.kpi-card {
+  border: none;
+  border-radius: .75rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,.07);
+  transition: box-shadow .2s;
+}
+.kpi-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+.kpi-card .kpi-icon {
+  width: 2.8rem; height: 2.8rem;
+  border-radius: .5rem;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem;
+}
+.kpi-value { font-size: 1.6rem; font-weight: 700; line-height: 1.1; }
+.kpi-label { font-size: .78rem; color: #64748b; text-transform: uppercase; letter-spacing: .05em; }
+.kpi-trend { font-size: .8rem; }
+
+/* Tabelle */
+.table-gh th {
+  background: #f8fafc;
+  font-size: .78rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: #64748b;
+  border-bottom: 2px solid #e2e8f0;
+  padding: .6rem .75rem;
+  white-space: nowrap;
+}
+.table-gh td { padding: .55rem .75rem; vertical-align: middle; }
+.table-gh tbody tr:hover { background: #f8fafc; }
+
+/* Badge stato fatture */
+.badge-importata     { background: #dbeafe; color: #1d4ed8; }
+.badge-verificata    { background: #dcfce7; color: #15803d; }
+.badge-contabilizzata { background: #f3e8ff; color: #7e22ce; }
+.badge-pagata        { background: #d1fae5; color: #065f46; }
+.badge-annullata     { background: #fee2e2; color: #991b1b; }
+
+/* Login */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+}
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  border: none;
+  border-radius: 1rem;
+  box-shadow: 0 20px 60px rgba(0,0,0,.3);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  #sidebar { width: 0; overflow: hidden; }
+  #sidebar.show { width: var(--gh-sidebar-width); }
+  #main { margin-left: 0; }
+}
+
+/* Suggerimento conto (highlight) */
+.conto-suggerito { background: #fef9c3 !important; }
+.conto-confermato { background: #f0fdf4 !important; }

@@ -1,0 +1,32 @@
+# Configurazione con credenziali - NON committare
+config/config.php
+
+# Upload fatture e file sensibili
+uploads/xml/*.xml
+uploads/xml/*.p7m
+uploads/p7m/*.xml
+uploads/p7m/*.p7m
+
+# Log applicazione
+logs/*.log
+
+# Cache e file temporanei
+*.tmp
+*.cache
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Composer (se aggiunto in futuro)
+vendor/
+composer.lock
+
+# File PDF sorgente (dati aziendali riservati)
+*.pdf
+*.xls
+*.xlsx

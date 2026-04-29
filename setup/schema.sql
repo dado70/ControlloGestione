@@ -1,0 +1,1052 @@
+-- GestHotel FE v0.0.1 - Schema Database
+-- Charset: utf8mb4_unicode_ci
+-- Compatibile con MySQL 8.0+
+
+SET NAMES utf8mb4;
+SET time_zone = '+00:00';
+SET foreign_key_checks = 0;
+SET sql_mode = 'NO_AUTO_VALUE_ON_ZERO';
+
+-- =============================================================
+-- TABELLE
+-- =============================================================
+
+CREATE TABLE IF NOT EXISTS `aziende` (
+  `id`                    INT            AUTO_INCREMENT PRIMARY KEY,
+  `ragione_sociale`       VARCHAR(255)   NOT NULL,
+  `partita_iva`           VARCHAR(20)    NOT NULL,
+  `codice_fiscale`        VARCHAR(20)    DEFAULT NULL,
+  `indirizzo`             VARCHAR(255)   DEFAULT NULL,
+  `cap`                   VARCHAR(10)    DEFAULT NULL,
+  `comune`                VARCHAR(100)   DEFAULT NULL,
+  `provincia`             CHAR(2)        DEFAULT NULL,
+  `nazione`               CHAR(2)        DEFAULT 'IT',
+  `codice_destinatario`   VARCHAR(10)    DEFAULT NULL,
+  `pec_destinatario`      VARCHAR(255)   DEFAULT NULL,
+  `attiva`                TINYINT(1)     NOT NULL DEFAULT 1,
+  `created_at`            TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`            TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_piva` (`partita_iva`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `utenti` (
+  `id`            INT            AUTO_INCREMENT PRIMARY KEY,
+  `username`      VARCHAR(50)    NOT NULL,
+  `password_hash` VARCHAR(255)   NOT NULL,
+  `nome`          VARCHAR(100)   DEFAULT NULL,
+  `cognome`       VARCHAR(100)   DEFAULT NULL,
+  `email`         VARCHAR(255)   DEFAULT NULL,
+  `ruolo`         ENUM('superadmin','admin','operatore','readonly') NOT NULL DEFAULT 'operatore',
+  `attivo`        TINYINT(1)     NOT NULL DEFAULT 1,
+  `created_at`    TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`    TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_username` (`username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `utenti_aziende` (
+  `id`         INT  AUTO_INCREMENT PRIMARY KEY,
+  `id_utente`  INT  NOT NULL,
+  `id_azienda` INT  NOT NULL,
+  `ruolo`      ENUM('admin','operatore','readonly') NOT NULL DEFAULT 'operatore',
+  UNIQUE KEY `uk_utente_azienda` (`id_utente`, `id_azienda`),
+  FOREIGN KEY (`id_utente`)  REFERENCES `utenti`(`id`)  ON DELETE CASCADE,
+  FOREIGN KEY (`id_azienda`) REFERENCES `aziende`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `piano_conti_cee` (
+  `id`                    INT            AUTO_INCREMENT PRIMARY KEY,
+  `codice`                VARCHAR(20)    NOT NULL,
+  `descrizione`           VARCHAR(255)   NOT NULL,
+  `livello`               TINYINT        NOT NULL,
+  `codice_padre`          VARCHAR(20)    DEFAULT NULL,
+  `sezione`               ENUM('ATTIVO','PASSIVO','PATRIMONIO_NETTO','COSTI','RICAVI') NOT NULL,
+  `formula_totalizzazione` VARCHAR(100)  DEFAULT NULL,
+  `stampa_bilancio`       TINYINT(1)     NOT NULL DEFAULT 1,
+  `ordine`                INT            DEFAULT 0,
+  UNIQUE KEY `uk_codice_cee` (`codice`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `piano_conti` (
+  `id`           INT            AUTO_INCREMENT PRIMARY KEY,
+  `id_azienda`   INT            NOT NULL,
+  `codice`       VARCHAR(20)    NOT NULL,
+  `descrizione`  VARCHAR(255)   NOT NULL,
+  `livello`      TINYINT        NOT NULL DEFAULT 3,
+  `codice_padre` VARCHAR(20)    DEFAULT NULL,
+  `tipo`         ENUM('COSTO','RICAVO','ATTIVO','PASSIVO','PATRIMONIALE') NOT NULL,
+  `attivo`       TINYINT(1)     NOT NULL DEFAULT 1,
+  `note`         VARCHAR(255)   DEFAULT NULL,
+  `created_at`   TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`   TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_codice_azienda` (`id_azienda`, `codice`),
+  FOREIGN KEY (`id_azienda`) REFERENCES `aziende`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `centri_costo` (
+  `id`          INT            AUTO_INCREMENT PRIMARY KEY,
+  `id_azienda`  INT            NOT NULL,
+  `codice`      VARCHAR(20)    NOT NULL,
+  `descrizione` VARCHAR(100)   NOT NULL,
+  `tipo`        ENUM('COSTO','RICAVO','MISTO') NOT NULL DEFAULT 'COSTO',
+  `attivo`      TINYINT(1)     NOT NULL DEFAULT 1,
+  `ordine`      INT            NOT NULL DEFAULT 0,
+  `note`        VARCHAR(255)   DEFAULT NULL,
+  UNIQUE KEY `uk_cc_azienda` (`id_azienda`, `codice`),
+  FOREIGN KEY (`id_azienda`) REFERENCES `aziende`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `mappatura_pdc_cee` (
+  `id`          INT         AUTO_INCREMENT PRIMARY KEY,
+  `id_azienda`  INT         NOT NULL,
+  `id_conto`    INT         NOT NULL,
+  `codice_cee`  VARCHAR(20) NOT NULL,
+  `note`        VARCHAR(255) DEFAULT NULL,
+  `created_at`  TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_mapping` (`id_azienda`, `id_conto`, `codice_cee`),
+  FOREIGN KEY (`id_azienda`) REFERENCES `aziende`(`id`),
+  FOREIGN KEY (`id_conto`)   REFERENCES `piano_conti`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `mappatura_conto_cc` (
+  `id`              INT            AUTO_INCREMENT PRIMARY KEY,
+  `id_azienda`      INT            NOT NULL,
+  `id_conto`        INT            NOT NULL,
+  `id_centro_costo` INT            NOT NULL,
+  `percentuale`     DECIMAL(5,2)   NOT NULL DEFAULT 100.00,
+  UNIQUE KEY `uk_conto_cc` (`id_azienda`, `id_conto`, `id_centro_costo`),
+  FOREIGN KEY (`id_conto`)        REFERENCES `piano_conti`(`id`),
+  FOREIGN KEY (`id_centro_costo`) REFERENCES `centri_costo`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `keyword_conto` (
+  `id`         INT           AUTO_INCREMENT PRIMARY KEY,
+  `id_azienda` INT           NOT NULL,
+  `id_conto`   INT           NOT NULL,
+  `keyword`    VARCHAR(100)  NOT NULL,
+  `peso`       INT           NOT NULL DEFAULT 1,
+  FOREIGN KEY (`id_conto`) REFERENCES `piano_conti`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `cedenti_prestatori` (
+  `id`                   INT            AUTO_INCREMENT PRIMARY KEY,
+  `id_azienda`           INT            NOT NULL,
+  `id_paese`             CHAR(2)        NOT NULL DEFAULT 'IT',
+  `id_codice`            VARCHAR(28)    NOT NULL,
+  `codice_fiscale`       VARCHAR(16)    DEFAULT NULL,
+  `denominazione`        VARCHAR(255)   DEFAULT NULL,
+  `nome`                 VARCHAR(100)   DEFAULT NULL,
+  `cognome`              VARCHAR(100)   DEFAULT NULL,
+  `titolo`               VARCHAR(10)    DEFAULT NULL,
+  `cod_eori`             VARCHAR(17)    DEFAULT NULL,
+  `regime_fiscale`       VARCHAR(4)     DEFAULT NULL,
+  `sede_indirizzo`       VARCHAR(255)   DEFAULT NULL,
+  `sede_numerocivico`    VARCHAR(10)    DEFAULT NULL,
+  `sede_cap`             VARCHAR(10)    DEFAULT NULL,
+  `sede_comune`          VARCHAR(100)   DEFAULT NULL,
+  `sede_provincia`       CHAR(2)        DEFAULT NULL,
+  `sede_nazione`         CHAR(2)        NOT NULL DEFAULT 'IT',
+  `rea_ufficio`          CHAR(2)        DEFAULT NULL,
+  `rea_numero`           VARCHAR(20)    DEFAULT NULL,
+  `rea_capitale_sociale` DECIMAL(15,2)  DEFAULT NULL,
+  `rea_socio_unico`      ENUM('SU','SM') DEFAULT NULL,
+  `rea_stato_liquidazione` ENUM('LS','LN') DEFAULT NULL,
+  `telefono`             VARCHAR(30)    DEFAULT NULL,
+  `email`                VARCHAR(255)   DEFAULT NULL,
+  `attivo`               TINYINT(1)     NOT NULL DEFAULT 1,
+  `note`                 TEXT           DEFAULT NULL,
+  `created_at`           TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`           TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_piva_azienda` (`id_azienda`, `id_codice`),
+  FOREIGN KEY (`id_azienda`) REFERENCES `aziende`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `fatture_elettroniche` (
+  `id`                        INT            AUTO_INCREMENT PRIMARY KEY,
+  `id_azienda`                INT            NOT NULL,
+  `id_cedente`                INT            NOT NULL,
+  `nome_file`                 VARCHAR(255)   NOT NULL,
+  `tipo_file`                 ENUM('xml','p7m') NOT NULL,
+  `percorso_file`             VARCHAR(500)   DEFAULT NULL,
+  `hash_sha256`               VARCHAR(64)    DEFAULT NULL,
+  `id_trasmittente_paese`     CHAR(2)        DEFAULT NULL,
+  `id_trasmittente_codice`    VARCHAR(28)    DEFAULT NULL,
+  `progressivo_invio`         VARCHAR(10)    DEFAULT NULL,
+  `formato_trasmissione`      VARCHAR(10)    DEFAULT NULL,
+  `codice_destinatario`       VARCHAR(10)    DEFAULT NULL,
+  `pec_destinatario`          VARCHAR(255)   DEFAULT NULL,
+  `tipo_documento`            VARCHAR(4)     NOT NULL,
+  `divisa`                    CHAR(3)        NOT NULL DEFAULT 'EUR',
+  `data_documento`            DATE           NOT NULL,
+  `numero_documento`          VARCHAR(20)    NOT NULL,
+  `importo_totale`            DECIMAL(15,2)  DEFAULT NULL,
+  `causale`                   TEXT           DEFAULT NULL,
+  `causale_trasporto`         VARCHAR(100)   DEFAULT NULL,
+  `numero_colli`              INT            DEFAULT NULL,
+  `descrizione_colli`         VARCHAR(100)   DEFAULT NULL,
+  `unita_misura_peso`         VARCHAR(10)    DEFAULT NULL,
+  `peso_lordo`                DECIMAL(10,3)  DEFAULT NULL,
+  `peso_netto`                DECIMAL(10,3)  DEFAULT NULL,
+  `data_inizio_trasporto`     DATE           DEFAULT NULL,
+  `condizioni_pagamento`      VARCHAR(4)     DEFAULT NULL,
+  `modalita_pagamento`        VARCHAR(4)     DEFAULT NULL,
+  `data_scadenza_pagamento`   DATE           DEFAULT NULL,
+  `importo_pagamento`         DECIMAL(15,2)  DEFAULT NULL,
+  `istituto_finanziario`      VARCHAR(100)   DEFAULT NULL,
+  `iban`                      VARCHAR(34)    DEFAULT NULL,
+  `abi`                       VARCHAR(5)     DEFAULT NULL,
+  `cab`                       VARCHAR(5)     DEFAULT NULL,
+  `stato`                     ENUM('importata','verificata','contabilizzata','pagata','annullata') NOT NULL DEFAULT 'importata',
+  `data_import`               TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `importata_da`              INT            DEFAULT NULL,
+  `note`                      TEXT           DEFAULT NULL,
+  `created_at`                TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`                TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_hash` (`hash_sha256`),
+  INDEX `idx_azienda_data` (`id_azienda`, `data_documento`),
+  INDEX `idx_cedente`      (`id_cedente`),
+  FOREIGN KEY (`id_azienda`) REFERENCES `aziende`(`id`),
+  FOREIGN KEY (`id_cedente`) REFERENCES `cedenti_prestatori`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `fatture_linee` (
+  `id`                          INT             AUTO_INCREMENT PRIMARY KEY,
+  `id_fattura`                  INT             NOT NULL,
+  `id_azienda`                  INT             NOT NULL,
+  `numero_linea`                INT             NOT NULL,
+  `tipo_cessione_prestazione`   VARCHAR(4)      DEFAULT NULL,
+  `codice_articolo_tipo`        VARCHAR(35)     DEFAULT NULL,
+  `codice_articolo_valore`      VARCHAR(35)     DEFAULT NULL,
+  `descrizione`                 TEXT            NOT NULL,
+  `quantita`                    DECIMAL(12,5)   DEFAULT NULL,
+  `unita_misura`                VARCHAR(10)     DEFAULT NULL,
+  `data_inizio_periodo`         DATE            DEFAULT NULL,
+  `data_fine_periodo`           DATE            DEFAULT NULL,
+  `prezzo_unitario`             DECIMAL(15,8)   DEFAULT NULL,
+  `sconto_tipo`                 ENUM('SC','MG') DEFAULT NULL,
+  `sconto_percentuale`          DECIMAL(6,2)    DEFAULT NULL,
+  `sconto_importo`              DECIMAL(15,2)   DEFAULT NULL,
+  `prezzo_totale`               DECIMAL(15,2)   NOT NULL,
+  `aliquota_iva`                DECIMAL(6,2)    DEFAULT NULL,
+  `ritenuta`                    VARCHAR(2)      DEFAULT NULL,
+  `natura_iva`                  VARCHAR(4)      DEFAULT NULL,
+  `id_conto`                    INT             DEFAULT NULL,
+  `id_centro_costo`             INT             DEFAULT NULL,
+  `classificazione_confermata`  TINYINT(1)      NOT NULL DEFAULT 0,
+  `note_classificazione`        VARCHAR(255)    DEFAULT NULL,
+  `created_at`                  TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`                  TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_fattura` (`id_fattura`),
+  INDEX `idx_conto`   (`id_conto`),
+  INDEX `idx_centro`  (`id_centro_costo`),
+  FOREIGN KEY (`id_fattura`) REFERENCES `fatture_elettroniche`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`id_azienda`) REFERENCES `aziende`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `fatture_riepilogo_iva` (
+  `id`                   INT            AUTO_INCREMENT PRIMARY KEY,
+  `id_fattura`           INT            NOT NULL,
+  `aliquota_iva`         DECIMAL(6,2)   DEFAULT NULL,
+  `natura_iva`           VARCHAR(4)     DEFAULT NULL,
+  `imponibile`           DECIMAL(15,2)  DEFAULT NULL,
+  `imposta`              DECIMAL(15,2)  DEFAULT NULL,
+  `esigibilita_iva`      CHAR(1)        DEFAULT NULL,
+  `riferimento_normativo` VARCHAR(100)  DEFAULT NULL,
+  FOREIGN KEY (`id_fattura`) REFERENCES `fatture_elettroniche`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `movimenti_contabili` (
+  `id`              INT            AUTO_INCREMENT PRIMARY KEY,
+  `id_azienda`      INT            NOT NULL,
+  `anno`            YEAR           NOT NULL,
+  `mese`            TINYINT        NOT NULL,
+  `id_conto`        INT            NOT NULL,
+  `id_centro_costo` INT            DEFAULT NULL,
+  `dare`            DECIMAL(15,2)  NOT NULL DEFAULT 0.00,
+  `avere`           DECIMAL(15,2)  NOT NULL DEFAULT 0.00,
+  `origine`         ENUM('fattura','manuale','import_xls') NOT NULL DEFAULT 'fattura',
+  `id_fattura`      INT            DEFAULT NULL,
+  `note`            VARCHAR(255)   DEFAULT NULL,
+  `created_at`      TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_periodo` (`id_azienda`, `anno`, `mese`),
+  FOREIGN KEY (`id_azienda`) REFERENCES `aziende`(`id`),
+  FOREIGN KEY (`id_conto`)   REFERENCES `piano_conti`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `login_attempts` (
+  `id`         INT          AUTO_INCREMENT PRIMARY KEY,
+  `username`   VARCHAR(50)  NOT NULL,
+  `ip`         VARCHAR(45)  NOT NULL,
+  `creato_il`  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_username_data` (`username`, `creato_il`),
+  INDEX `idx_ip_data`       (`ip`, `creato_il`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `audit_log` (
+  `id`         INT           AUTO_INCREMENT PRIMARY KEY,
+  `id_utente`  INT           DEFAULT NULL,
+  `username`   VARCHAR(50)   DEFAULT NULL,
+  `azione`     VARCHAR(100)  NOT NULL,
+  `dettaglio`  TEXT          DEFAULT NULL,
+  `ip`         VARCHAR(45)   DEFAULT NULL,
+  `creato_il`  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_utente`  (`id_utente`),
+  INDEX `idx_azione`  (`azione`),
+  INDEX `idx_data`    (`creato_il`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =============================================================
+-- DATI INIZIALI
+-- =============================================================
+
+-- Azienda: Villa Ottone SRL
+INSERT INTO `aziende`
+  (`ragione_sociale`, `partita_iva`, `codice_fiscale`, `indirizzo`, `cap`, `comune`, `provincia`, `nazione`)
+VALUES
+  ('VILLA OTTONE S.R.L.', '00074440496', '00074440496', 'LOC. OTTONE', '57037', 'PORTOFERRAIO', 'LI', 'IT');
+
+-- =============================================================
+-- PIANO DEI CONTI - Villa Ottone (id_azienda = 1)
+-- Struttura: livello 1 = mastro (codice XX)
+--            livello 2 = conto  (codice XX.YY.ZZZ con ZZZ < 500)
+--            livello 3 = sottoconto specifico (codice XX.YY.ZZZ con ZZZ >= 500)
+-- =============================================================
+
+-- -----------------------------------------------------------
+-- LIVELLO 1 - MASTRI
+-- -----------------------------------------------------------
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'04','IMMOBILIZZAZIONI IMMATERIALI',1,NULL,'ATTIVO'),
+(1,'13','IMMOBILIZZAZIONI MATERIALI',1,NULL,'ATTIVO'),
+(1,'16','FONDI AMMORTAMENTO',1,NULL,'PASSIVO'),
+(1,'22','IMMOBILIZZAZIONI FINANZIARIE',1,NULL,'ATTIVO'),
+(1,'25','RIMANENZE',1,NULL,'ATTIVO'),
+(1,'28','CREDITI',1,NULL,'ATTIVO'),
+(1,'34','DISPONIBILITA\' LIQUIDE',1,NULL,'ATTIVO'),
+(1,'37','RATEI E RISCONTI ATTIVI',1,NULL,'ATTIVO'),
+(1,'40','PATRIMONIO NETTO',1,NULL,'PASSIVO'),
+(1,'43','FONDI RISCHI E ONERI',1,NULL,'PASSIVO'),
+(1,'46','TRATTAMENTO FINE RAPPORTO',1,NULL,'PASSIVO'),
+(1,'49','DEBITI',1,NULL,'PASSIVO'),
+(1,'52','RATEI E RISCONTI PASSIVI',1,NULL,'PASSIVO'),
+(1,'60','RICAVI DA SERVIZI ALBERGHIERI',1,NULL,'RICAVO'),
+(1,'71','ALTRI RICAVI E PROVENTI',1,NULL,'RICAVO'),
+(1,'73','ACQUISTI MATERIE E MERCI',1,NULL,'COSTO'),
+(1,'75','SERVIZI ESTERNI',1,NULL,'COSTO'),
+(1,'77','GODIMENTO BENI DI TERZI',1,NULL,'COSTO'),
+(1,'79','COSTO DEL PERSONALE',1,NULL,'COSTO'),
+(1,'81','AMMORTAMENTI IMMATERIALI',1,NULL,'COSTO'),
+(1,'83','AMMORTAMENTI MATERIALI',1,NULL,'COSTO'),
+(1,'89','VARIAZIONI RIMANENZE',1,NULL,'COSTO'),
+(1,'91','ACCANTONAMENTI',1,NULL,'COSTO'),
+(1,'92','ONERI DIVERSI DI GESTIONE',1,NULL,'COSTO'),
+(1,'93','PROVENTI E ONERI FINANZIARI',1,NULL,'COSTO'),
+(1,'95','POSTE STRAORDINARIE',1,NULL,'COSTO'),
+(1,'96','IMPOSTE DI ESERCIZIO',1,NULL,'COSTO');
+
+-- -----------------------------------------------------------
+-- LIVELLO 2 - CONTI (derivati da "Conto di riferimento" del PDF)
+-- -----------------------------------------------------------
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+-- 04 Immobilizzazioni immateriali
+(1,'04.02.001','COSTI DI SVILUPPO',2,'04','ATTIVO'),
+-- 13 Immobilizzazioni materiali
+(1,'13.01.001','TERRENO',2,'13','ATTIVO'),
+(1,'13.03.001','FABBRICATI CIVILI',2,'13','ATTIVO'),
+(1,'13.05.041','ALTRI IMPIANTI SPECIFICI',2,'13','ATTIVO'),
+(1,'13.09.001','AUTOVETTURE',2,'13','ATTIVO'),
+(1,'13.09.061','MACCHINE D\'UFFICIO ELETTRONICHE',2,'13','ATTIVO'),
+(1,'13.09.065','COMPUTER ED ACCESSORI',2,'13','ATTIVO'),
+(1,'13.09.081','MOBILI E ARREDI',2,'13','ATTIVO'),
+(1,'13.09.113','ALTRI BENI MATERIALI',2,'13','ATTIVO'),
+-- 16 Fondi ammortamento
+(1,'16.01.005','F.DO AMM.TO FABBRICATI CIVILI',2,'16','PASSIVO'),
+(1,'16.03.037','F.DO AMM.TO ALTRI IMPIANTI SPECIFICI',2,'16','PASSIVO'),
+(1,'16.07.093','F.DO AMM.TO ALTRI BENI MATERIALI',2,'16','PASSIVO'),
+-- 25 Rimanenze
+(1,'25.07.005','MERCI',2,'25','ATTIVO'),
+-- 28 Crediti
+(1,'28.01.001','CLIENTI',2,'28','ATTIVO'),
+(1,'28.01.037','FATTURE DA EMETTERE',2,'28','ATTIVO'),
+(1,'28.01.049','CLIENTI C/SPESE ANTICIPATE',2,'28','ATTIVO'),
+(1,'28.01.055','CARTE DI CREDITO',2,'28','ATTIVO'),
+(1,'28.11.001','CREDITO IRES',2,'28','ATTIVO'),
+(1,'28.11.009','CREDITO IVA',2,'28','ATTIVO'),
+(1,'28.11.129','ALTRI CREDITI TRIBUTARI',2,'28','ATTIVO'),
+(1,'28.13.001','CREDITI IMPOSTE ANTICIPATE',2,'28','ATTIVO'),
+(1,'28.15.001','CREDITO INAIL C/CONGUAGLIO',2,'28','ATTIVO'),
+(1,'28.15.005','CREDITO INPS C/CONGUAGLIO',2,'28','ATTIVO'),
+(1,'28.15.045','SOCI C/PRELIEVO',2,'28','ATTIVO'),
+(1,'28.15.125','CREDITI DIVERSI',2,'28','ATTIVO'),
+(1,'28.15.137','CREDITI V/ALTRI ESIG. OLTRE ES.SUC.',2,'28','ATTIVO'),
+-- 34 Disponibilita liquide
+(1,'34.01.001','BANCA BCCE',2,'34','ATTIVO'),
+(1,'34.05.001','CASSA CONTANTI',2,'34','ATTIVO'),
+-- 37 Risconti attivi
+(1,'37.01.005','RISCONTI ATTIVI',2,'37','ATTIVO'),
+-- 40 Patrimonio netto
+(1,'40.05.029','RISERVA DI RIVALUTAZIONE',2,'40','PASSIVO'),
+(1,'40.15.005','PERDITE ESERCIZI PRECEDENTI',2,'40','PASSIVO'),
+-- 43 Fondi rischi
+(1,'43.03.001','F.DO RISCHI SU CAMBI',2,'43','PASSIVO'),
+-- 46 TFR
+(1,'46.01.001','FONDO T.F.R.',2,'46','PASSIVO'),
+-- 49 Debiti
+(1,'49.07.035','MUTUO IPOTECARIO OLTRE ES.SUC.',2,'49','PASSIVO'),
+(1,'49.07.037','BANCA C/FINANZIAMENTI',2,'49','PASSIVO'),
+(1,'49.07.047','BANCHE C/C PASSIVI',2,'49','PASSIVO'),
+(1,'49.11.005','CAPARRE DA CLIENTI',2,'49','PASSIVO'),
+(1,'49.11.013','CAPARRE',2,'49','PASSIVO'),
+(1,'49.13.005','FATTURE DA RICEVERE',2,'49','PASSIVO'),
+(1,'49.17.001','DEBITI V. IMPRESA CONTROLLATA A',2,'49','PASSIVO'),
+(1,'49.21.017','DEBITI V. IMPR. CONTROLLANTE OLTRE ES.SUC.',2,'49','PASSIVO'),
+(1,'49.23.001','ERARIO C/IRES',2,'49','PASSIVO'),
+(1,'49.23.009','ERARIO C/IVA',2,'49','PASSIVO'),
+(1,'49.23.029','ERARIO C/RIT. FISCALI LAVORATORI DIPENDENTI',2,'49','PASSIVO'),
+(1,'49.23.037','ERARIO C/RIT. FISCALI CO. CO. CO.',2,'49','PASSIVO'),
+(1,'49.23.061','ERARIO C/RIT. FISCALI ADD. REGIONALE',2,'49','PASSIVO'),
+(1,'49.23.069','ERARIO C/RIT. FISCALI ADD. COMUNALE',2,'49','PASSIVO'),
+(1,'49.23.085','ALTRI DEBITI TRIBUTARI',2,'49','PASSIVO'),
+(1,'49.25.001','DEBITO V/INPS LAVORO DIPENDENTE',2,'49','PASSIVO'),
+(1,'49.25.027','ALTRI DEBITI V/ISTITUTI PREVIDENZIALI FAST',2,'49','PASSIVO'),
+(1,'49.25.032','DEBITI V/FONDO TFR ALTRI ENTI',2,'49','PASSIVO'),
+(1,'49.27.001','DEBITI V/AMMINISTRATORI',2,'49','PASSIVO'),
+(1,'49.27.025','DIPENDENTI C/RETRIBUZIONI',2,'49','PASSIVO'),
+(1,'49.27.081','RITENUTE SINDACALI',2,'49','PASSIVO'),
+(1,'49.27.113','DEBITI DIVERSI',2,'49','PASSIVO'),
+-- 52 Ratei e risconti passivi
+(1,'52.01.001','RATEI PASSIVI',2,'52','PASSIVO'),
+(1,'52.01.005','RISCONTI PASSIVI',2,'52','PASSIVO'),
+-- 60 Ricavi
+(1,'60.01.005','RICAVI DA PRESTAZIONE DI SERVIZI',2,'60','RICAVO'),
+(1,'60.01.006','RICAVI DA PRESTAZ. DI SERVIZI PROFESSIONALI',2,'60','RICAVO'),
+(1,'60.01.009','MERCI C/VENDITE',2,'60','RICAVO'),
+(1,'60.01.085','ALTRI RICAVI',2,'60','RICAVO'),
+(1,'60.01.166','SCONTI SU VENDITE',2,'60','RICAVO'),
+-- 71 Altri ricavi
+(1,'71.01.001','CANONI DI LOCAZIONE FABBRICATI',2,'71','RICAVO'),
+(1,'71.01.009','AFFITTI ATTIVI ALTRI BENI',2,'71','RICAVO'),
+(1,'71.01.069','RIADDEBITO ALTRE PENALI',2,'71','RICAVO'),
+(1,'71.01.185','CONTR. C/CREDITO D\'IMPOSTA NON TASSABILI',2,'71','RICAVO'),
+(1,'71.01.213','CONTR. C/IMPIANTI NON TASSABILI',2,'71','RICAVO'),
+-- 73 Acquisti
+(1,'73.01.001','MATERIE PRIME C/ACQUISTI',2,'73','COSTO'),
+(1,'73.01.013','MERCI C/ACQUISTI',2,'73','COSTO'),
+(1,'73.01.017','MATERIALE DI CONSUMO C/ACQUISTI',2,'73','COSTO'),
+(1,'73.05.001','MATERIE PRIME C/SCONTI',2,'73','COSTO'),
+(1,'73.09.009','GASOLIO',2,'73','COSTO'),
+-- 75 Servizi
+(1,'75.01.001','SERVIZI PER ACQUISTI',2,'75','COSTO'),
+(1,'75.01.022','LAVORAZIONI ESTERNE PER SERVIZI',2,'75','COSTO'),
+(1,'75.01.025','ENERGIA ELETTRICA',2,'75','COSTO'),
+(1,'75.01.029','GAS/GPL/METANO',2,'75','COSTO'),
+(1,'75.01.033','GASOLIO/CARBURANTI',2,'75','COSTO'),
+(1,'75.01.037','ACQUA',2,'75','COSTO'),
+(1,'75.03.001','RIMB. A PIE\' DI LISTA AL PERS. DIPENDENTE',2,'75','COSTO'),
+(1,'75.05.001','MANUT. FABBRICATI',2,'75','COSTO'),
+(1,'75.05.077','MANUT. ATTREZZATURE COMMERCIALI',2,'75','COSTO'),
+(1,'75.05.109','MANUT. AUTOCAR.',2,'75','COSTO'),
+(1,'75.05.181','MANUTENZIONE E RIPARAZIONE',2,'75','COSTO'),
+(1,'75.07.001','CANONI ASS.ZA TECNICA MACCH. UFF. ELETTR.',2,'75','COSTO'),
+(1,'75.07.011','CANONI ASSISTENZA SOFTWARE',2,'75','COSTO'),
+(1,'75.11.001','CONSULENZE AMMINISTRATIVE',2,'75','COSTO'),
+(1,'75.11.017','COMPENSI AMMINISTRATORE',2,'75','COSTO'),
+(1,'75.11.041','CONTR. INAIL C.D.A.',2,'75','COSTO'),
+(1,'75.11.065','COMPENSI AL COLLEGIO SINDACALE',2,'75','COSTO'),
+(1,'75.11.093','COMPENSI LAVORO OCCASIONALE ATT.ATTIVITA\'',2,'75','COSTO'),
+(1,'75.11.109','SERVIZI AMMINISTRATIVI',2,'75','COSTO'),
+(1,'75.11.113','SPESE TELEFONICHE',2,'75','COSTO'),
+(1,'75.11.133','SPESE VARIE AMMINISTRATIVE',2,'75','COSTO'),
+(1,'75.13.005','SERVIZI COMMERCIALI',2,'75','COSTO'),
+(1,'75.13.037','PUBBLICITA\' E MARKETING',2,'75','COSTO'),
+(1,'75.13.501','COMMISSIONI AD AGENZIE',2,'75','COSTO'),
+(1,'75.15.001','ASSICURAZIONI',2,'75','COSTO'),
+(1,'75.17.013','SPESE DI PULIZIA INTERNI',2,'75','COSTO'),
+(1,'75.17.137','SIAE',2,'75','COSTO'),
+(1,'75.17.173','ALTRI SERVIZI DEDUCIBILI',2,'75','COSTO'),
+(1,'75.17.177','ALTRI SERVIZI INDEDUCIBILI',2,'75','COSTO'),
+(1,'75.17.500','INTERNET E TELECOMUNICAZIONI',2,'75','COSTO'),
+(1,'75.17.501','COMPENSI MUSICISTI',2,'75','COSTO'),
+(1,'75.17.503','SKY E RAI',2,'75','COSTO'),
+-- 77 Godimento beni di terzi
+(1,'77.01.049','CANONE LOCAZIONE ATTREZZ. VARIA E MINUTA',2,'77','COSTO'),
+(1,'77.03.109','CANONE LEASING AUTOCAR.',2,'77','COSTO'),
+(1,'77.03.221','CANONI DI LEASING INDEDUCIBILI',2,'77','COSTO'),
+(1,'77.05.157','NOLEGGIO BIANCHERIA',2,'77','COSTO'),
+(1,'77.07.013','SOFTWARE E LICENZE',2,'77','COSTO'),
+(1,'77.09.001','CANONI AFFITTO',2,'77','COSTO'),
+-- 79 Personale
+(1,'79.01.001','SALARI',2,'79','COSTO'),
+(1,'79.01.005','STIPENDI IMPIEGATI',2,'79','COSTO'),
+(1,'79.01.013','TRASFERTE IMPIEGATI',2,'79','COSTO'),
+(1,'79.03.001','ONERI INPS',2,'79','COSTO'),
+(1,'79.03.005','ONERI INAIL',2,'79','COSTO'),
+-- 83 Ammortamenti
+(1,'83.09.113','AMM.TO ALTRI BENI MATERIALI',2,'83','COSTO'),
+-- 89 Variazioni rimanenze
+(1,'89.01.013','RIMANENZE INIZIALI MERCI',2,'89','COSTO'),
+(1,'89.02.013','RIMANENZE FINALI MERCI',2,'89','RICAVO'),
+-- 91 Accantonamenti
+(1,'91.01.037','ACC.TO ALTRI FONDI SPESE FUTURE',2,'91','COSTO'),
+-- 92 Oneri diversi
+(1,'92.01.005','IMU',2,'92','COSTO'),
+(1,'92.01.098','PERDITE SU CREDITI NON DEDUCIBILI',2,'92','COSTO'),
+(1,'92.01.105','ABBONAMENTI RIVISTE E GIORNALI',2,'92','COSTO'),
+(1,'92.01.109','ONERI DI UTILITA\' SOCIALE',2,'92','COSTO'),
+(1,'92.01.113','MULTE E AMMENDE',2,'92','COSTO'),
+(1,'92.01.141','ABBUONI PASSIVI',2,'92','COSTO'),
+-- 93 Finanziari
+(1,'93.13.001','INTERESSI ATTIVI C/C BANCARI',2,'93','RICAVO'),
+(1,'93.15.001','INTERESSI PASS. V/IMPR. CONTROLLATE',2,'93','COSTO'),
+(1,'93.15.025','INTERESSI PASSIVI MUTUI',2,'93','COSTO'),
+(1,'93.15.046','INTERESSI LIQUID. IVA TRIMESTRALE',2,'93','COSTO'),
+(1,'93.15.053','INTERESSI PASSIVI DERIVATI',2,'93','COSTO'),
+(1,'93.15.078','COMMISSIONI CARTE DI CREDITO',2,'93','COSTO'),
+-- 96 Imposte
+(1,'96.01.001','IRES',2,'96','COSTO');
+
+-- -----------------------------------------------------------
+-- LIVELLO 3 - SOTTOCONTI SPECIFICI (estratti dal PDF pdc1.pdf)
+-- -----------------------------------------------------------
+
+-- 04 - Immobilizzazioni immateriali
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'04.02.501','COSTI DI SVILUPPO SPECIFICI A',3,'04.02.001','ATTIVO'),
+(1,'04.02.502','COSTI DI SVILUPPO SPECIFICI B',3,'04.02.001','ATTIVO');
+
+-- 13 - Immobilizzazioni materiali
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'13.01.501','TERRENO SPECIFICO "A"',3,'13.01.001','ATTIVO'),
+(1,'13.01.502','TERRENO SPECIFICO "B"',3,'13.01.001','ATTIVO'),
+(1,'13.01.503','TERRENO SPECIFICO "C"',3,'13.01.001','ATTIVO'),
+(1,'13.01.504','TERRENO SPECIFICO "D"',3,'13.01.001','ATTIVO'),
+(1,'13.01.505','TERRENO SPECIFICO "E"',3,'13.01.001','ATTIVO'),
+(1,'13.03.501','ACCONTO SPESE FABBRICATO',3,'13.03.001','ATTIVO'),
+(1,'13.03.502','FABBRICATI SPECIFICI "B"',3,'13.03.001','ATTIVO'),
+(1,'13.03.503','FABBRICATI SPECIFICI "C"',3,'13.03.001','ATTIVO'),
+(1,'13.03.504','FABBRICATI SPECIFICI "D"',3,'13.03.001','ATTIVO'),
+(1,'13.03.505','FABBRICATI SPECIFICI "E"',3,'13.03.001','ATTIVO'),
+(1,'13.03.506','FABBRICATI SPECIFICI "F"',3,'13.03.001','ATTIVO'),
+(1,'13.05.501','IMPIANTO SPECIFICO "A"',3,'13.05.041','ATTIVO'),
+(1,'13.05.502','IMPIANTI SPECIFICI "B"',3,'13.05.041','ATTIVO'),
+(1,'13.09.501','ATTREZZATURE BALNEARI',3,'13.09.113','ATTIVO'),
+(1,'13.09.502','ALTRI BENI MATERIALI SPECIFICI "B"',3,'13.09.113','ATTIVO'),
+(1,'13.09.503','TELEVISORE',3,'13.09.081','ATTIVO'),
+(1,'13.09.504','ARREDO GIARDINO ED ESTERNI',3,'13.09.081','ATTIVO'),
+(1,'13.09.505','PERSONAL COMPUTER (NOTEBOOK)',3,'13.09.065','ATTIVO'),
+(1,'13.09.506','MACCHINE UFFICIO',3,'13.09.061','ATTIVO'),
+(1,'13.09.507','INSEGNE',3,'13.09.001','ATTIVO');
+
+-- 16 - Fondi ammortamento
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'16.01.501','F.DO AMM.TO FABBRICATI SPECIFICI "A"',3,'16.01.005','PASSIVO'),
+(1,'16.01.502','F.DO AMM.TO FABBRICATI SPECIFICI "B"',3,'16.01.005','PASSIVO'),
+(1,'16.01.503','F.DO AMM.TO FABBRICATI SPECIFICI "C"',3,'16.01.005','PASSIVO'),
+(1,'16.01.504','F.DO AMM.TO FABBRICATI SPECIFICI "D"',3,'16.01.005','PASSIVO'),
+(1,'16.01.505','F.DO AMM.TO FABBRICATI SPECIFICI "E"',3,'16.01.005','PASSIVO'),
+(1,'16.03.501','FONDO AMM.TO ALTRI IMP.SPEC. "A"',3,'16.03.037','PASSIVO'),
+(1,'16.03.502','FONDO AMM.TO ALTRI IMP.SPEC. "B"',3,'16.03.037','PASSIVO'),
+(1,'16.07.501','F.DO AMM.TO ATTREZZATURE BALNEARI',3,'16.07.093','PASSIVO'),
+(1,'16.07.502','FONDO AMM.TO ALTRI BENI SPECIFICI "B"',3,'16.07.093','PASSIVO');
+
+-- 25 - Rimanenze
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'25.07.500','MERCI SPECIFICHE "A"',3,'25.07.005','ATTIVO'),
+(1,'25.07.501','MERCI SPECIFICHE "B"',3,'25.07.005','ATTIVO');
+
+-- 28 - Crediti
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'28.01.002','CLIENTI C/ANTICIPAZIONI',3,'28.01.001','ATTIVO'),
+(1,'28.01.003','CLIENTI ROBIN TUR',3,'28.01.001','ATTIVO'),
+(1,'28.01.056','CARTE DI CREDITO "B"',3,'28.01.055','ATTIVO'),
+(1,'28.01.500','CLIENTI C/SPESE ANTICIPATE 1',3,'28.01.049','ATTIVO'),
+(1,'28.01.501','CLIENTI RIC. FISCALI SOSPESE',3,'28.01.001','ATTIVO'),
+(1,'28.01.502','FATTURE DA EMETTERE A IMPR. SPECIFICA "A"',3,'28.01.037','ATTIVO'),
+(1,'28.11.501','RITENUTE SUBITE ANNI PRECEDENTI',3,'28.11.129','ATTIVO'),
+(1,'28.11.502','CREDITI IMPOSTA BENI STRUMENTALI',3,'28.11.129','ATTIVO'),
+(1,'28.11.503','CREDITI ASSUNZ. DETENUTI DM148',3,'28.11.129','ATTIVO'),
+(1,'28.11.504','ERARIO C/RIMBORSI',3,'28.11.129','ATTIVO'),
+(1,'28.11.505','ERARIO C/RIT. CONC. BANDI',3,'28.11.129','ATTIVO'),
+(1,'28.11.506','PAGAMENTI F24/CBILL',3,'28.11.129','ATTIVO'),
+(1,'28.13.501','CREDITI PER IMPOSTE ANTICIPATE SPEC A',3,'28.13.001','ATTIVO'),
+(1,'28.15.500','CREDITI DIVERSI SPECIFICI',3,'28.15.125','ATTIVO'),
+(1,'28.15.501','DEPOSITI PER UTENZE',3,'28.15.137','ATTIVO'),
+(1,'28.15.502','PRELIEVO SOCIO "A"',3,'28.15.045','ATTIVO'),
+(1,'28.15.503','PRELIEVO SOCIO "B"',3,'28.15.045','ATTIVO'),
+(1,'28.15.504','PRELIEVO SOCIO "C"',3,'28.15.045','ATTIVO'),
+(1,'28.15.505','PRELIEVO SOCIO "D"',3,'28.15.045','ATTIVO'),
+(1,'28.15.506','PRELIEVO SOCIO "E"',3,'28.15.045','ATTIVO'),
+(1,'28.15.507','TRANSITORIO ATTIVO (ANAGRAFICA GENERICA)',3,'28.15.125','ATTIVO'),
+(1,'28.15.508','CREDITI DIVERSI SPECIFICI "B"',3,'28.15.125','ATTIVO'),
+(1,'28.15.509','CREDITI PER CAUZIONI OLTRE ES.2',3,'28.15.137','ATTIVO'),
+(1,'28.15.510','CREDITI PER CAUZIONI OLTRE ES.3',3,'28.15.137','ATTIVO'),
+(1,'28.15.511','CREDITI PER DEP. CAU2. OLTRE ES.4',3,'28.15.137','ATTIVO'),
+(1,'28.15.512','ALTRI CREDITI SPECIFICI "C"',3,'28.15.125','ATTIVO'),
+(1,'28.15.513','CREDITI PER RECUPERO 50% COMM. POS',3,'28.15.001','ATTIVO');
+
+-- 34 - Banche e cassa
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'34.01.500','BANCA MPS',3,'34.01.001','ATTIVO'),
+(1,'34.01.501','BANCA UNICREDIT',3,'34.01.001','ATTIVO'),
+(1,'34.01.502','BANCA CREDEM',3,'34.01.001','ATTIVO'),
+(1,'34.01.503','BANCA C/C I',3,'34.01.001','ATTIVO'),
+(1,'34.01.504','BANCA C/C J',3,'34.01.001','ATTIVO'),
+(1,'34.01.505','BANCA C/C K',3,'34.01.001','ATTIVO'),
+(1,'34.01.506','BANCA C/C L',3,'34.01.001','ATTIVO'),
+(1,'34.01.507','BANCA C/C M',3,'34.01.001','ATTIVO'),
+(1,'34.01.508','BANCA C/C N',3,'34.01.001','ATTIVO'),
+(1,'34.05.501','CARTA PREPAGATA',3,'34.05.001','ATTIVO'),
+(1,'34.05.502','CARTA PREPAGATA "A"',3,'34.05.001','ATTIVO'),
+(1,'34.05.503','CARTA PREPAGATA B',3,'34.05.001','ATTIVO'),
+(1,'34.05.505','CASSA CONTANTI B',3,'34.05.001','ATTIVO'),
+(1,'34.05.506','CARTA PREPAGATA C',3,'34.05.001','ATTIVO');
+
+-- 37 - Risconti attivi
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'37.01.501','RISCONTI ATTIVI LEASING',3,'37.01.005','ATTIVO');
+
+-- 40 - Patrimonio netto
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'40.05.500','RIS. RIV. TERRENO N.185/08',3,'40.05.029','PASSIVO'),
+(1,'40.05.501','RISERVA RIVALUTAZ. RIALLINEATA',3,'40.05.029','PASSIVO'),
+(1,'40.15.501','PERDITE RIPORTABILI SPECIFICHE A',3,'40.15.005','PASSIVO');
+
+-- 43 - Fondi rischi
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'43.03.500','ALTRE FORME FONDO PREVID. COPL',3,'43.03.001','PASSIVO');
+
+-- 46 - TFR
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'46.01.501','FONDO TRATTAMENTO DI FINE RAPPORTO',3,'46.01.001','PASSIVO'),
+(1,'46.01.502','FONDO TFR',3,'46.01.001','PASSIVO'),
+(1,'46.01.503','FONDO TFR COMPLEMENTARE',3,'46.01.001','PASSIVO');
+
+-- 49 - Debiti (finanziamenti)
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'49.07.500','BANCA C/FINANZIAMENTO OLTRE ES.SUC.',3,'49.07.035','PASSIVO'),
+(1,'49.07.501','CARTA PREPAGATA 7587',3,'49.07.047','PASSIVO'),
+(1,'49.07.502','MUTUO BCCE 000/003110',3,'49.07.037','PASSIVO'),
+(1,'49.07.503','FINANZ. SANTANDER 15569494P001',3,'49.07.035','PASSIVO'),
+(1,'49.07.504','MUTUO CARDUCCI 7146',3,'49.07.035','PASSIVO'),
+(1,'49.07.505','CARTA PREPAGATA 9116',3,'49.07.047','PASSIVO'),
+(1,'49.07.506','CARTE DI CREDITO "C"',3,'49.07.047','PASSIVO'),
+(1,'49.07.507','CARTE DI CREDITO "D"',3,'49.07.047','PASSIVO'),
+(1,'49.07.508','PRESTITO CRV 063/00178539 GARANT. STATO',3,'49.07.037','PASSIVO'),
+(1,'49.07.509','PRESTITO CRV 063/00179752',3,'49.07.037','PASSIVO'),
+(1,'49.07.510','FINANZ. UNICREDIT 8662489',3,'49.07.037','PASSIVO'),
+(1,'49.07.511','FINANZ. MPS 346850 ER6S',3,'49.07.037','PASSIVO'),
+(1,'49.07.512','FINANZ. MPS 0994121730',3,'49.07.037','PASSIVO'),
+(1,'49.07.513','MUTUO INTESA 08/65836904',3,'49.07.037','PASSIVO'),
+(1,'49.07.514','MUTUO INTESA 00/10862018',3,'49.07.037','PASSIVO'),
+(1,'49.07.515','FINANZ. MPS 5006364 EU6S',3,'49.07.037','PASSIVO'),
+(1,'49.07.516','MUTUO BPM 2729 4782564',3,'49.07.037','PASSIVO'),
+(1,'49.07.517','MUTUO CRV 063/00013193',3,'49.07.037','PASSIVO'),
+(1,'49.07.518','MUTUO CREDEM 706/007975276',3,'49.07.037','PASSIVO'),
+(1,'49.07.519','MUTUO MPS 313103 ER6S',3,'49.07.037','PASSIVO'),
+(1,'49.07.520','MUTUO CARDUCCI M0100000013005',3,'49.07.037','PASSIVO'),
+(1,'49.07.521','MUTUO CARDUCCI M0100000013096',3,'49.07.037','PASSIVO'),
+(1,'49.07.522','FINANZIAMENTI REGIONE TOSCANA',3,'49.07.035','PASSIVO'),
+(1,'49.07.523','FINANZ. UNICREDIT F1000002501247',3,'49.07.037','PASSIVO'),
+(1,'49.07.524','FINANZ. MPS 0994372837',3,'49.07.037','PASSIVO'),
+(1,'49.07.525','FINANZ. UNICREDIT F1000002505734',3,'49.07.037','PASSIVO'),
+(1,'49.07.526','FINANZ. UNICREDIT 000/2631930/000',3,'49.07.037','PASSIVO'),
+(1,'49.07.527','MUTUO CARDUCCI 00000017874',3,'49.07.037','PASSIVO'),
+(1,'49.07.528','PRESTITO CRV 192168',3,'49.07.037','PASSIVO'),
+(1,'49.07.529','BANCA C/FINANZIAMENTI "X"',3,'49.07.037','PASSIVO'),
+(1,'49.07.530','BANCA C/FINANZIAMENTI "Y"',3,'49.07.037','PASSIVO'),
+(1,'49.07.531','BANCA C/FINANZIAMENTI "Z"',3,'49.07.037','PASSIVO');
+
+-- 49 - Debiti (caparre, fornitori, fisco, previdenza, dipendenti)
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'49.11.501','CAPARRE RIMBORSATE/DA RIMBORSARE',3,'49.11.013','PASSIVO'),
+(1,'49.11.502','CAPARRE PER ANNO SUCCESSIVO',3,'49.11.005','PASSIVO'),
+(1,'49.11.503','CAPARRE ANNO PRECEDENTE',3,'49.11.005','PASSIVO'),
+(1,'49.13.501','FATTURE DA RICEVERE DA IMPR. SPECIFICA "A"',3,'49.13.005','PASSIVO'),
+(1,'49.13.502','FATTURE DA RICEVERE DA IMPR. SPECIFICA "B"',3,'49.13.005','PASSIVO'),
+(1,'49.13.503','ALTRI DEBITI V/FORNITORI',3,'49.13.005','PASSIVO'),
+(1,'49.17.014','DEBITI V. IMPRESA CONTROLLATA E',3,'49.17.001','PASSIVO'),
+(1,'49.21.500','DEBITI V/CONTROLLANTI OLTRE ES. "A"',3,'49.21.017','PASSIVO'),
+(1,'49.21.501','DEBITI V/CONTROLLANTI OLTRE ES. "B"',3,'49.21.017','PASSIVO'),
+(1,'49.23.500','ERARIO C/IMPOSTE',3,'49.23.001','PASSIVO'),
+(1,'49.23.501','ERARIO C/IVA ANNI PRECEDENTI',3,'49.23.009','PASSIVO'),
+(1,'49.23.502','ALTRI DEBITI IVA',3,'49.23.009','PASSIVO'),
+(1,'49.23.503','ERARIO C/IMPOSTE ES. PRECEDENTI',3,'49.23.085','PASSIVO'),
+(1,'49.23.504','ANTE2023 ERARIO C/RIT. FISCALI LAV. DIP.',3,'49.23.029','PASSIVO'),
+(1,'49.23.505','IMPOSTE RATEIZZATE',3,'49.23.085','PASSIVO'),
+(1,'49.23.506','DEBITI PER RATEIZZ. B',3,'49.23.085','PASSIVO'),
+(1,'49.23.507','DEBITI PER RATEIZZ. C',3,'49.23.085','PASSIVO'),
+(1,'49.23.508','DEBITI PER RATEIZZ. D',3,'49.23.085','PASSIVO'),
+(1,'49.23.509','DEBITI PER RATEIZZ. E',3,'49.23.085','PASSIVO'),
+(1,'49.23.510','DEBITI PER IVA DIVERSI',3,'49.23.009','PASSIVO'),
+(1,'49.23.511','TRANSITORIO PASSIVO (ANAGRAFICA GENERICA)',3,'49.23.085','PASSIVO'),
+(1,'49.23.512','DEBITI/CREDITI DA 730',3,'49.23.029','PASSIVO'),
+(1,'49.23.513','DEBITI PER RATEIZZ. G',3,'49.23.001','PASSIVO'),
+(1,'49.23.514','DEBITI PER RATEIZZ. H',3,'49.23.001','PASSIVO'),
+(1,'49.23.515','DEBITI PER RATEIZZ. I',3,'49.23.001','PASSIVO'),
+(1,'49.23.516','DEBITI PER RATEIZZ. J',3,'49.23.001','PASSIVO'),
+(1,'49.23.517','DEBITI PER RATEIZZ. K',3,'49.23.001','PASSIVO'),
+(1,'49.23.518','DEBITI PER RATEIZZ. L',3,'49.23.001','PASSIVO'),
+(1,'49.23.519','DEBITI PER RATEIZZ. M',3,'49.23.001','PASSIVO'),
+(1,'49.23.520','DEBITI PER RATEIZZ. N',3,'49.23.001','PASSIVO'),
+(1,'49.23.521','ERARIO C/RIT. FISCALI COLLAB. OCC. SOSPESE',3,'49.23.037','PASSIVO'),
+(1,'49.23.522','ERARIO C/RIT. FISCALI ADD. REG. SOSPESE',3,'49.23.061','PASSIVO'),
+(1,'49.23.523','ERARIO C/RIT. FISCALI ADD. COM. SOSPESE',3,'49.23.069','PASSIVO'),
+(1,'49.23.524','DEBITI PER RATEIZZ. O',3,'49.23.001','PASSIVO'),
+(1,'49.23.525','DEBITI PER RATEIZZ. P',3,'49.23.001','PASSIVO'),
+(1,'49.23.526','DEBITI PER RATEIZZ. Q',3,'49.23.001','PASSIVO'),
+(1,'49.23.527','DEBITI PER RATEIZZ. R',3,'49.23.085','PASSIVO'),
+(1,'49.23.528','DEBITI PER RATEIZZ. S',3,'49.23.085','PASSIVO'),
+(1,'49.23.529','DEBITI PER RATEIZZ. T',3,'49.23.085','PASSIVO'),
+(1,'49.23.530','DEBITI PER RATEIZZ. U',3,'49.23.085','PASSIVO'),
+(1,'49.23.531','DEBITI PER RATEIZZ. V',3,'49.23.085','PASSIVO'),
+(1,'49.23.532','DEBITI PER RATEIZZ. W',3,'49.23.085','PASSIVO'),
+(1,'49.23.533','DEBITI PER RATEIZZ. X',3,'49.23.085','PASSIVO'),
+(1,'49.23.534','DEBITI PER RATEIZZ. Y',3,'49.23.085','PASSIVO'),
+(1,'49.23.535','DEBITI PER RATEIZZ. Z',3,'49.23.085','PASSIVO'),
+(1,'49.25.501','DEBITO V/INPS AMMINISTRATORI',3,'49.25.001','PASSIVO'),
+(1,'49.25.502','DEBITI INPS/INAIL PER FERIE NON GODUTE',3,'49.25.001','PASSIVO'),
+(1,'49.25.503','ANTE2023 DEBITO V/INPS LAVORO DIPENDENTE',3,'49.25.001','PASSIVO'),
+(1,'49.25.504','ANTE2023 DEBITO V/INPS AMMINISTRATORI',3,'49.25.001','PASSIVO'),
+(1,'49.25.505','ALTRI DEBITI PREVIDENZIALI SPECIFICI C',3,'49.25.001','PASSIVO'),
+(1,'49.25.506','ALTRI DEBITI PREVIDENZIALI SPECIFICI D',3,'49.25.001','PASSIVO'),
+(1,'49.25.507','ANTE2023 ALTRI DEBITI V/IST. PREV. FAST',3,'49.25.027','PASSIVO'),
+(1,'49.25.508','ANTE2023 DEBITI V/FONDO TFR ALTRI ENTI',3,'49.25.032','PASSIVO'),
+(1,'49.27.500','ALTRI DEBITI ENTRO ESERCIZIO',3,'49.27.113','PASSIVO'),
+(1,'49.27.501','INT. BANCA SU CC DA ADDEBITARE',3,'49.27.113','PASSIVO'),
+(1,'49.27.502','DEB. V/BANCHE COMP. CHIUSURA',3,'49.27.113','PASSIVO'),
+(1,'49.27.504','DEBITI DI COMPETENZA',3,'49.27.113','PASSIVO'),
+(1,'49.27.505','DEBITI V/DIPENDENTI PER FERIE NON GODUTE',3,'49.27.025','PASSIVO'),
+(1,'49.27.506','ALTRI DEBITI SPECIFICI D',3,'49.27.113','PASSIVO'),
+(1,'49.27.507','ALTRI DEBITI SPECIFICI E',3,'49.27.113','PASSIVO'),
+(1,'49.27.508','CONTRIBUTI ENTE: ADDIZIONALE REGIONALE',3,'49.27.025','PASSIVO'),
+(1,'49.27.509','DEBITI V/DIPENDENTI B',3,'49.27.025','PASSIVO'),
+(1,'49.27.510','DEBITI V/DIPENDENTI C',3,'49.27.025','PASSIVO'),
+(1,'49.27.511','DEBITI V/DIPENDENTI D',3,'49.27.025','PASSIVO'),
+(1,'49.27.512','DEBITI V/DIPENDENTI E',3,'49.27.025','PASSIVO'),
+(1,'49.27.513','DEBITI V/DIPENDENTI F',3,'49.27.025','PASSIVO'),
+(1,'49.27.514','DEBITI V/DIPENDENTI G',3,'49.27.025','PASSIVO'),
+(1,'49.27.515','DEBITI V/SOCI ANAGRAFICO',3,'49.27.001','PASSIVO'),
+(1,'49.27.516','ALTRI DEBITI SPECIFICI F',3,'49.27.113','PASSIVO'),
+(1,'49.27.517','DEBITI V/DIPENDENTI H',3,'49.27.025','PASSIVO'),
+(1,'49.27.518','DEBITI V/DIPENDENTI I',3,'49.27.025','PASSIVO'),
+(1,'49.27.519','DEBITI V/DIPENDENTI J',3,'49.27.025','PASSIVO'),
+(1,'49.27.520','DEBITI V/DIPENDENTI K',3,'49.27.025','PASSIVO'),
+(1,'49.27.521','DEBITI V/DIPENDENTI L',3,'49.27.025','PASSIVO'),
+(1,'49.27.522','DEBITI V/DIPENDENTI M',3,'49.27.025','PASSIVO'),
+(1,'49.27.523','DEBITI V/DIPENDENTI N',3,'49.27.025','PASSIVO'),
+(1,'49.27.524','DEBITI V/DIPENDENTI O',3,'49.27.025','PASSIVO'),
+(1,'49.27.525','DEBITI V/DIPENDENTI P',3,'49.27.025','PASSIVO'),
+(1,'49.27.526','DEBITI V/DIPENDENTI Q',3,'49.27.025','PASSIVO'),
+(1,'49.27.527','DEBITI V/DIPENDENTI R',3,'49.27.025','PASSIVO'),
+(1,'49.27.528','DEBITI V/DIPENDENTI S',3,'49.27.025','PASSIVO'),
+(1,'49.27.529','DEBITI V/DIPENDENTI T',3,'49.27.025','PASSIVO'),
+(1,'49.27.530','DEBITI V/DIPENDENTI U',3,'49.27.025','PASSIVO'),
+(1,'49.27.531','DEBITI V/DIPENDENTI V',3,'49.27.025','PASSIVO'),
+(1,'49.27.532','DEBITI V/DIPENDENTI W',3,'49.27.025','PASSIVO'),
+(1,'49.27.533','DEBITI V/DIPENDENTI X',3,'49.27.025','PASSIVO'),
+(1,'49.27.534','DEBITI V/DIPENDENTI Y',3,'49.27.025','PASSIVO'),
+(1,'49.27.535','DEBITI V/DIPENDENTI Z',3,'49.27.025','PASSIVO'),
+(1,'49.27.536','RATEO INPS FERIE E PERMESSI',3,'49.27.025','PASSIVO'),
+(1,'49.27.537','ANTE2023 RITENUTE SINDACALI',3,'49.27.081','PASSIVO'),
+(1,'49.27.538','DEBITI V/DIPENDENTI AA',3,'49.27.025','PASSIVO'),
+(1,'49.27.539','DEBITI V/DIPENDENTI AB',3,'49.27.025','PASSIVO'),
+(1,'49.27.540','DEBITI V/DIPENDENTI AC',3,'49.27.025','PASSIVO'),
+(1,'49.27.541','DEBITI V/DIPENDENTI AD',3,'49.27.025','PASSIVO'),
+(1,'49.27.542','DEBITI V/DIPENDENTI AE',3,'49.27.025','PASSIVO'),
+(1,'49.27.543','DEBITI V/DIPENDENTI AF',3,'49.27.025','PASSIVO'),
+(1,'49.27.544','DEBITI V/DIPENDENTI AG',3,'49.27.025','PASSIVO'),
+(1,'49.27.545','DEBITI V/DIPENDENTI AH',3,'49.27.025','PASSIVO'),
+(1,'49.27.546','DEBITI V/DIPENDENTI AI',3,'49.27.025','PASSIVO'),
+(1,'49.27.547','DEBITI V/DIPENDENTI AJ',3,'49.27.025','PASSIVO'),
+(1,'49.27.548','DEBITI V/DIPENDENTI AK',3,'49.27.025','PASSIVO'),
+(1,'49.27.549','DEBITI V/DIPENDENTI AL',3,'49.27.025','PASSIVO'),
+(1,'49.27.550','DEBITI V/DIPENDENTI AM',3,'49.27.025','PASSIVO');
+
+-- 52 - Ratei e risconti passivi
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'52.01.501','RATEI PASS. CONTRIB. FERIE + 14MA',3,'52.01.001','PASSIVO'),
+(1,'52.01.502','RATEI PASS. FERIE/PERMESSI/14MA',3,'52.01.005','PASSIVO');
+
+-- 60 - Ricavi
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'60.01.500','QUOTE ASSOCIATIVE',3,'60.01.085','RICAVO'),
+(1,'60.01.501','SPONSORIZZAZIONI',3,'60.01.085','RICAVO'),
+(1,'60.01.502','TRASPORTI FERRY',3,'60.01.085','RICAVO'),
+(1,'60.01.503','ALTRI RICAVI SPECIFICI "B"',3,'60.01.085','RICAVO'),
+(1,'60.01.504','VENDITE SPECIFICHE "A"',3,'60.01.009','RICAVO'),
+(1,'60.01.505','VENDITE SPECIFICHE "B"',3,'60.01.009','RICAVO'),
+(1,'60.01.506','RICAVI SPECIFICI PROF 1',3,'60.01.006','RICAVO'),
+(1,'60.01.507','RICAVI SPECIFICI PROF 2',3,'60.01.006','RICAVO'),
+(1,'60.01.508','RICAVI SPECIFICI PROF 3',3,'60.01.006','RICAVO'),
+(1,'60.01.509','RICAVI SPECIFICI PROF 4',3,'60.01.006','RICAVO'),
+(1,'60.01.510','RICAVI SPECIFICI PROF 5',3,'60.01.006','RICAVO'),
+(1,'60.01.511','RICAVI SPECIFICI PROF 6',3,'60.01.006','RICAVO'),
+(1,'60.01.512','RICAVI SPECIFICI PROF 7',3,'60.01.006','RICAVO'),
+(1,'60.01.513','RICAVI SPECIFICI SERVIZI 1',3,'60.01.005','RICAVO'),
+(1,'60.01.514','RICAVI SPECIFICI SERVIZI 2',3,'60.01.005','RICAVO'),
+(1,'60.01.515','RICAVI SPECIFICI SERVIZI 3',3,'60.01.005','RICAVO'),
+(1,'60.01.516','ALTRI RICAVI IMPRESE DEL TURISMO',3,'60.01.005','RICAVO'),
+(1,'60.01.517','RICAVI SPEC PROF 8',3,'60.01.006','RICAVO'),
+(1,'60.01.518','RICAVI SPEC PROF 9',3,'60.01.006','RICAVO'),
+(1,'60.01.519','RICAVI SPEC PROF 10',3,'60.01.006','RICAVO'),
+(1,'60.01.520','RICAVI SPEC PROF 11',3,'60.01.006','RICAVO'),
+(1,'60.01.521','RICAVI SPEC PROF 12',3,'60.01.006','RICAVO'),
+(1,'60.01.522','RICAVI SPEC PROF 13',3,'60.01.006','RICAVO'),
+(1,'60.01.523','RICAVI SPEC PROF 14',3,'60.01.006','RICAVO'),
+(1,'60.01.524','RICAVI SPEC PROF 15',3,'60.01.006','RICAVO'),
+(1,'60.01.525','RICAVI SPEC PROF 16',3,'60.01.006','RICAVO'),
+(1,'60.01.526','RICAVI SPEC PROF 17',3,'60.01.006','RICAVO'),
+(1,'60.01.527','RICAVI SPEC PROF 18',3,'60.01.006','RICAVO'),
+(1,'60.01.528','RICAVI SPEC PROF 19',3,'60.01.006','RICAVO'),
+(1,'60.01.550','SCONTI SU VENDITE B',3,'60.01.166','RICAVO');
+
+-- 71 - Altri ricavi
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'71.01.501','ALTRI RICAVI "A"',3,'71.01.009','RICAVO'),
+(1,'71.01.502','RIADDEBITO DIPENDENTI',3,'71.01.069','RICAVO'),
+(1,'71.01.503','ALTRI CONTRIBUTI SPECIFICI NON TASSATI',3,'71.01.185','RICAVO'),
+(1,'71.01.504','CONTRIBUTI C/IMPIANTI (ISOLE MINORI)',3,'71.01.213','RICAVO'),
+(1,'71.01.505','CONTR. C/IMP. ART.1 L.178/2020',3,'71.01.213','RICAVO'),
+(1,'71.01.506','ALTRI RICAVI B',3,'71.01.001','RICAVO');
+
+-- 73 - Acquisti
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'73.01.500','ACQUISTI VARI',3,'73.01.013','COSTO'),
+(1,'73.01.501','ACQ. MERCE SPECIFICA "B"',3,'73.01.013','COSTO'),
+(1,'73.01.502','ACQ. MERCE SPECIFICA "C"',3,'73.01.013','COSTO'),
+(1,'73.01.503','ACQ. MERCE SPECIFICA "D"',3,'73.01.013','COSTO'),
+(1,'73.01.504','ACQ. MERCE SPECIFICA "E"',3,'73.01.013','COSTO'),
+(1,'73.01.505','ACQ. MERCE SPECIFICA "F"',3,'73.01.013','COSTO'),
+(1,'73.01.506','ACQ. MERCE SPECIFICA "G"',3,'73.01.013','COSTO'),
+(1,'73.01.507','ACQ. MERCE SPECIFICA "H"',3,'73.01.013','COSTO'),
+(1,'73.01.508','ACQ. MERCE SPECIFICA "I"',3,'73.01.013','COSTO'),
+(1,'73.01.509','ACQ. MERCE SPECIFICA "L"',3,'73.01.013','COSTO'),
+(1,'73.01.510','ACQ. MERCE SPECIFICA "M"',3,'73.01.013','COSTO'),
+(1,'73.01.511','ACQ. MERCE SPECIFICA "N"',3,'73.01.013','COSTO'),
+(1,'73.01.512','ACQ. MERCE SPECIFICA "O"',3,'73.01.001','COSTO'),
+(1,'73.01.513','MATERIALE CONSUMO UFFICIO',3,'73.01.001','COSTO'),
+(1,'73.01.514','ACQ. MERCE SPECIFICA "P"',3,'73.01.001','COSTO'),
+(1,'73.01.515','ACQ. MERCE SPECIFICA "Q"',3,'73.01.001','COSTO'),
+(1,'73.01.516','ACQ. MERCE SPECIFICA "R"',3,'73.01.001','COSTO'),
+(1,'73.01.517','ACQ. MERCE SPECIFICA "S"',3,'73.01.001','COSTO'),
+(1,'73.01.518','ACQ. MERCE SPECIFICA "T"',3,'73.01.001','COSTO'),
+(1,'73.01.519','ACQ. MERCE SPECIFICA "U"',3,'73.01.001','COSTO'),
+(1,'73.05.501','VISITE ED ESAMI MEDICI DIPENDENTI',3,'73.05.001','COSTO'),
+(1,'73.09.045','CANCELLERIA',3,'73.01.017','COSTO'),
+(1,'73.09.500','ATTREZZATURA VARIA + STOVIGLIE',3,'73.01.017','COSTO'),
+(1,'73.09.501','ACQUISTO BIANCHERIA',3,'73.01.017','COSTO'),
+(1,'73.09.502','SPESE GENERALI VARIE',3,'73.01.017','COSTO'),
+(1,'73.09.503','SPESE VARIE NON DOCUMENTATE',3,'73.01.017','COSTO'),
+(1,'73.09.504','ACQUISTI SPECIFICI D',3,'75.01.025','COSTO');
+
+-- 75 - Servizi
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'75.01.005','TRASPORTO',3,'75.01.001','COSTO'),
+(1,'75.01.025','ENERGIA ELETTRICA',3,'75.01.025','COSTO'),
+(1,'75.01.029','GAS/GPL/METANO',3,'75.01.029','COSTO'),
+(1,'75.01.033','GASOLIO/CARBURANTI',3,'75.01.033','COSTO'),
+(1,'75.01.037','ACQUA',3,'75.01.037','COSTO'),
+(1,'75.01.501','SERVIZI IND. SPEC. "A"',3,'75.01.001','COSTO'),
+(1,'75.01.502','SERVIZI SPECIFICI A',3,'75.01.025','COSTO'),
+(1,'75.01.503','SERVIZI SPECIFICI B',3,'75.01.022','COSTO'),
+(1,'75.01.504','SERVIZI SPECIFICI C',3,'75.01.022','COSTO'),
+(1,'75.01.505','SERVIZI SPECIFICI D',3,'75.01.022','COSTO'),
+(1,'75.01.506','SERVIZI SPECIFICI E',3,'75.01.001','COSTO'),
+(1,'75.01.507','SERVIZI SPECIFICI F',3,'75.01.001','COSTO'),
+(1,'75.01.508','SERVIZI SPECIFICI G',3,'75.01.001','COSTO'),
+(1,'75.01.509','SERVIZI SPECIFICI H',3,'75.01.001','COSTO'),
+(1,'75.01.510','SERVIZI SPECIFICI I',3,'75.01.001','COSTO'),
+(1,'75.03.501','VISITE ED ESAMI MEDICI DIPENDENTI',3,'75.03.001','COSTO'),
+(1,'75.05.181','MANUTENZIONE E RIPARAZIONE',3,'75.05.001','COSTO'),
+(1,'75.05.501','MANUT. E RIP. AUTOCARRI NON PROPRI',3,'75.05.109','COSTO'),
+(1,'75.05.502','MANUTENZIONI UFFICIO',3,'75.05.001','COSTO'),
+(1,'75.05.503','MANUTENZIONI NS. NIDO',3,'75.05.001','COSTO'),
+(1,'75.05.504','MANUTENZIONI "A"',3,'75.05.077','COSTO'),
+(1,'75.05.505','MANUTENZIONI "B"',3,'75.05.077','COSTO'),
+(1,'75.05.506','MANUTENZIONI "C"',3,'75.05.077','COSTO'),
+(1,'75.07.501','AGGIORNAMENTO SOFTWARE',3,'75.07.001','COSTO'),
+(1,'75.07.502','CANONI SPECIFICI',3,'75.07.011','COSTO'),
+(1,'75.07.503','CANONI SPECIFICI "A"',3,'75.07.011','COSTO'),
+(1,'75.11.113','SPESE TELEFONICHE',3,'75.11.113','COSTO'),
+(1,'75.11.501','COLLABORAZIONI PROFESSIONALI',3,'75.11.093','COSTO'),
+(1,'75.11.502','SPESE AMMINISTRATIVE SPECIFICHE A',3,'75.11.133','COSTO'),
+(1,'75.11.503','COMPENSO REVISORE',3,'75.11.065','COSTO'),
+(1,'75.11.504','RIMBORSO SPESE AMMINISTRATORE',3,'75.11.017','COSTO'),
+(1,'75.11.505','CONTR. INAIL COLLABORATORI',3,'75.11.041','COSTO'),
+(1,'75.11.506','COSTI AMMINISTRATIVI DIVERSI',3,'75.11.001','COSTO'),
+(1,'75.11.507','COLLAB. PROF SPECIFICHE A',3,'75.11.001','COSTO'),
+(1,'75.11.508','SPESE AMMINISTRATIVE SPECIFICHE B',3,'75.11.109','COSTO'),
+(1,'75.11.509','ALTRI SERVIZI "A"',3,'75.11.109','COSTO'),
+(1,'75.13.037','PUBBLICITA\' E MARKETING',3,'75.13.037','COSTO'),
+(1,'75.13.501','COMMISSIONI AD AGENZIE',3,'75.13.005','COSTO'),
+(1,'75.13.502','SERVIZI COMMERCIALI SPECIFICI "B"',3,'75.13.005','COSTO'),
+(1,'75.13.503','SERVIZI COMMERCIALI SPECIFICI "C"',3,'75.13.005','COSTO'),
+(1,'75.13.504','SERVIZI COMMERCIALI SPECIFICI "D"',3,'75.11.113','COSTO'),
+(1,'75.13.505','SERVIZI COMMERCIALI SPECIFICI "E"',3,'75.11.113','COSTO'),
+(1,'75.13.506','SERVIZI COMMERCIALI SPECIFICI "F"',3,'75.13.005','COSTO'),
+(1,'75.17.137','SIAE',3,'75.17.173','COSTO'),
+(1,'75.17.500','SERVIZI INTERNET',3,'75.17.173','COSTO'),
+(1,'75.17.501','COMPENSI A MUSICISTI',3,'75.17.173','COSTO'),
+(1,'75.17.502','SPESE POSTALI',3,'75.17.173','COSTO'),
+(1,'75.17.503','CANONE SKY + RAI',3,'75.17.173','COSTO'),
+(1,'75.17.504','SERVIZI SPECIFICI D',3,'75.17.173','COSTO'),
+(1,'75.17.505','SERVIZI SPECIFICI E',3,'75.17.177','COSTO'),
+(1,'75.17.506','SERVIZI SPECIFICI F',3,'75.17.013','COSTO'),
+(1,'75.17.507','SERVIZI SPECIFICI G',3,'75.17.013','COSTO'),
+(1,'75.17.508','SERVIZI SPECIFICI H',3,'75.01.001','COSTO');
+
+-- 77 - Godimento beni di terzi
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'77.01.500','CONCESSIONI DEMANIALI',3,'77.01.049','COSTO'),
+(1,'77.01.501','CANONI LOCAZIONE BENI MOBILI',3,'77.01.049','COSTO'),
+(1,'77.03.501','MAXICANONE LEASING INDEDUCIBILE',3,'77.03.221','COSTO'),
+(1,'77.03.502','MAXICANONE LEASING DEDUCIBILE',3,'77.03.109','COSTO'),
+(1,'77.05.157','NOLEGGIO BIANCHERIA',3,'77.05.157','COSTO'),
+(1,'77.07.013','SOFTWARE E LICENZE',3,'77.07.013','COSTO'),
+(1,'77.09.501','CANONI AFFITTO 1',3,'77.09.001','COSTO'),
+(1,'77.09.502','CANONI AFFITTO 2',3,'77.09.001','COSTO'),
+(1,'77.09.503','CANONI AFFITTO 3',3,'77.09.001','COSTO'),
+(1,'77.09.504','CANONE AFFITTO 4',3,'77.09.001','COSTO'),
+(1,'77.09.505','CANONE AFFITTO 5',3,'77.09.001','COSTO');
+
+-- 79 - Personale
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'79.01.501','RIT. IRPEF SU STIPENDIO (PROF)',3,'79.01.001','COSTO'),
+(1,'79.01.502','STIPENDIO PERSONALE NON SOCIO',3,'79.01.005','COSTO'),
+(1,'79.01.503','STIPENDIO PERSONALE SOCIO',3,'79.01.005','COSTO'),
+(1,'79.03.500','ONERI INAIL AMMINISTRATORE',3,'79.03.001','COSTO'),
+(1,'79.03.501','ALTRI ONERI PREVIDENZIALI',3,'79.03.001','COSTO'),
+(1,'79.03.502','ALTRI ONERI PREVIDENZIALI B',3,'79.03.001','COSTO'),
+(1,'79.03.503','ALTRI ONERI PREVIDENZIALI C',3,'79.03.001','COSTO'),
+(1,'79.03.504','ALTRI ONERI PREVIDENZIALI D',3,'79.03.001','COSTO'),
+(1,'79.03.505','ALTRI ONERI PREVIDENZIALI E',3,'79.03.001','COSTO'),
+(1,'79.03.506','ALTRI ONERI PREVIDENZIALI F',3,'79.03.001','COSTO'),
+(1,'79.09.009','TRASFERTE DIPENDENTI',3,'79.01.013','COSTO');
+
+-- 83 - Ammortamenti
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'83.09.500','AMM.TO ATTREZZATURE BALNEARI',3,'83.09.113','COSTO');
+
+-- 89 - Variazioni rimanenze
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'89.01.500','RIMANENZE INIZIALI MERCI SPECIFICHE "A"',3,'89.01.013','COSTO'),
+(1,'89.02.500','RIMANENZE FINALI MERCI SPECIFICHE "A"',3,'89.02.013','RICAVO');
+
+-- 91 - Accantonamenti
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'91.01.501','ACC.TO FONDO SPESE FUTURE SPECIFICHE A',3,'91.01.037','COSTO'),
+(1,'91.01.502','ACC.TO FONDO SPESE FUTURE SPECIFICHE B',3,'91.01.037','COSTO'),
+(1,'91.01.503','ACC.TO FONDO SPESE FUTURE SPECIFICHE C',3,'91.01.037','COSTO'),
+(1,'91.01.504','ACC.TO FONDO SPESE FUTURE SPECIFICHE D',3,'91.01.037','COSTO'),
+(1,'91.01.505','ACC.TO FONDO SPESE FUTURE SPECIFICHE E',3,'91.01.037','COSTO'),
+(1,'91.01.506','ACC.TO FONDO SPESE FUTURE SPECIFICHE F',3,'91.01.037','COSTO'),
+(1,'91.01.507','ACC.TO FONDO SPESE FUTURE SPECIFICHE G',3,'91.01.037','COSTO'),
+(1,'91.01.508','ACC.TO FONDO SPESE FUTURE SPECIFICHE H',3,'91.01.037','COSTO'),
+(1,'91.01.509','ACC.TO FONDO SPESE FUTURE SPECIFICHE I',3,'91.01.037','COSTO'),
+(1,'91.01.510','ACC.TO FONDO SPESE FUTURE SPECIFICHE L',3,'91.01.037','COSTO'),
+(1,'91.01.511','ACC.TO FONDO SPESE FUTURE SPECIFICHE M',3,'91.01.037','COSTO');
+
+-- 92 - Oneri diversi
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'92.01.500','SANZIONI RAVVEDIMENTO OPEROSO',3,'92.01.113','COSTO'),
+(1,'92.01.501','ARROTONDAMENTI PASSIVI',3,'92.01.141','COSTO'),
+(1,'92.01.502','QUOTE ASSOCIATIVE',3,'92.01.109','COSTO'),
+(1,'92.01.503','CONSORZIO BONIFICA',3,'92.01.005','COSTO'),
+(1,'92.01.504','COSTI INDEDUCIBILI',3,'92.01.098','COSTO'),
+(1,'92.01.505','COSTI PER FRANCHIGIE',3,'92.01.141','COSTO'),
+(1,'92.01.506','SANZIONI SPECIFICHE A',3,'92.01.113','COSTO'),
+(1,'92.01.508','ONERI SPECIFICI A',3,'92.01.105','COSTO'),
+(1,'92.01.509','ONERI SPECIFICI B',3,'92.01.105','COSTO');
+
+-- 93 - Finanziari
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'93.13.501','ALTRI PROVENTI FINANZIARI SPECIFICI',3,'93.13.001','RICAVO'),
+(1,'93.15.501','INTERESSI PASS. RAVV. OPEROSO',3,'93.15.046','COSTO'),
+(1,'93.15.502','INT. PASSIVI SU DEP. CAUZIONALE',3,'93.15.053','COSTO'),
+(1,'93.15.503','INT. PASSIVI SU FINANZIAMENTO',3,'93.15.025','COSTO'),
+(1,'93.15.504','COMMISSIONI BANCARIE POS',3,'93.15.078','COSTO'),
+(1,'93.15.505','INTERESSI DI MORA',3,'93.15.025','COSTO'),
+(1,'93.15.506','INTERESSI PASSIVI SPECIFICI A',3,'93.15.001','COSTO');
+
+-- 96 - Imposte
+INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+(1,'96.01.501','IMPOSTE DI ESERCIZIO',3,'96.01.001','COSTO');
+
+-- =============================================================
+-- CENTRI DI COSTO - Villa Ottone (id_azienda = 1)
+-- =============================================================
+INSERT INTO `centri_costo` (`id_azienda`, `codice`, `descrizione`, `tipo`, `ordine`) VALUES
+(1,'CC01','Cucina / Ristorante','COSTO',1),
+(1,'CC02','Bar','COSTO',2),
+(1,'CC03','Housekeeping / Lavanderia','COSTO',3),
+(1,'CC04','Manutenzione & Giardino','COSTO',4),
+(1,'CC05','Reception / Front Office','COSTO',5),
+(1,'CC06','Amministrazione','COSTO',6),
+(1,'CC07','Energie & Utilities','COSTO',7),
+(1,'CC08','Marketing','COSTO',8),
+(1,'CC09','Balneare','COSTO',9);
+
+-- =============================================================
+-- KEYWORD PER SUGGERITORE CONTI (pre-popolate)
+-- Queste keyword vengono usate da ContoSuggestor per associare
+-- automaticamente la descrizione di una riga fattura al conto PDC
+-- =============================================================
+
+-- I riferimenti a id_conto vengono inseriti dopo che piano_conti è popolato.
+-- Si usano subquery per recuperare l'id del conto dal codice.
+
+INSERT INTO `keyword_conto` (`id_azienda`, `id_conto`, `keyword`, `peso`)
+SELECT 1, id, 'energia elettrica', 3 FROM piano_conti WHERE id_azienda=1 AND codice='75.01.025'
+UNION ALL SELECT 1, id, 'enel', 3 FROM piano_conti WHERE id_azienda=1 AND codice='75.01.025'
+UNION ALL SELECT 1, id, 'elettricita', 2 FROM piano_conti WHERE id_azienda=1 AND codice='75.01.025'
+UNION ALL SELECT 1, id, 'gas', 3 FROM piano_conti WHERE id_azienda=1 AND codice='75.01.029'
+UNION ALL SELECT 1, id, 'gpl', 3 FROM piano_conti WHERE id_azienda=1 AND codice='75.01.029'
+UNION ALL SELECT 1, id, 'metano', 3 FROM piano_conti WHERE id_azienda=1 AND codice='75.01.029'
+UNION ALL SELECT 1, id, 'gasolio', 3 FROM piano_conti WHERE id_azienda=1 AND codice='75.01.033'
+UNION ALL SELECT 1, id, 'carburante', 2 FROM piano_conti WHERE id_azienda=1 AND codice='75.01.033'
+UNION ALL SELECT 1, id, 'acqua', 3 FROM piano_conti WHERE id_azienda=1 AND codice='75.01.037'
+UNION ALL SELECT 1, id, 'fornitura idrica', 2 FROM piano_conti WHERE id_azienda=1 AND codice='75.01.037'
+UNION ALL SELECT 1, id, 'manutenzione', 3 FROM piano_conti WHERE id_azienda=1 AND codice='75.05.181'
+UNION ALL SELECT 1, id, 'riparazione', 3 FROM piano_conti WHERE id_azienda=1 AND codice='75.05.181'
+UNION ALL SELECT 1, id, 'noleggio biancheria', 3 FROM piano_conti WHERE id_azienda=1 AND codice='77.05.157'
+UNION ALL SELECT 1, id, 'biancheria', 2 FROM piano_conti WHERE id_azienda=1 AND codice='77.05.157'
+UNION ALL SELECT 1, id, 'commissioni', 3 FROM piano_conti WHERE id_azienda=1 AND codice='75.13.501'
+UNION ALL SELECT 1, id, 'agenzia', 2 FROM piano_conti WHERE id_azienda=1 AND codice='75.13.501'
+UNION ALL SELECT 1, id, 'assicurazione', 3 FROM piano_conti WHERE id_azienda=1 AND codice='75.15.001'
+UNION ALL SELECT 1, id, 'polizza', 2 FROM piano_conti WHERE id_azienda=1 AND codice='75.15.001'
+UNION ALL SELECT 1, id, 'telefon', 3 FROM piano_conti WHERE id_azienda=1 AND codice='75.11.113'
+UNION ALL SELECT 1, id, 'cellulare', 2 FROM piano_conti WHERE id_azienda=1 AND codice='75.11.113'
+UNION ALL SELECT 1, id, 'internet', 3 FROM piano_conti WHERE id_azienda=1 AND codice='75.17.500'
+UNION ALL SELECT 1, id, 'fibra', 2 FROM piano_conti WHERE id_azienda=1 AND codice='75.17.500'
+UNION ALL SELECT 1, id, 'pubblicita', 3 FROM piano_conti WHERE id_azienda=1 AND codice='75.13.037'
+UNION ALL SELECT 1, id, 'marketing', 3 FROM piano_conti WHERE id_azienda=1 AND codice='75.13.037'
+UNION ALL SELECT 1, id, 'cancelleria', 3 FROM piano_conti WHERE id_azienda=1 AND codice='73.09.045'
+UNION ALL SELECT 1, id, 'trasporto', 3 FROM piano_conti WHERE id_azienda=1 AND codice='75.01.005'
+UNION ALL SELECT 1, id, 'spedizione', 2 FROM piano_conti WHERE id_azienda=1 AND codice='75.01.005'
+UNION ALL SELECT 1, id, 'vino', 3 FROM piano_conti WHERE id_azienda=1 AND codice='73.01.013'
+UNION ALL SELECT 1, id, 'bevande', 3 FROM piano_conti WHERE id_azienda=1 AND codice='73.01.013'
+UNION ALL SELECT 1, id, 'alimenti', 3 FROM piano_conti WHERE id_azienda=1 AND codice='73.01.013'
+UNION ALL SELECT 1, id, 'merci', 2 FROM piano_conti WHERE id_azienda=1 AND codice='73.01.013'
+UNION ALL SELECT 1, id, 'alimentari', 3 FROM piano_conti WHERE id_azienda=1 AND codice='73.01.013'
+UNION ALL SELECT 1, id, 'software', 3 FROM piano_conti WHERE id_azienda=1 AND codice='77.07.013'
+UNION ALL SELECT 1, id, 'licenza', 3 FROM piano_conti WHERE id_azienda=1 AND codice='77.07.013'
+UNION ALL SELECT 1, id, 'siae', 3 FROM piano_conti WHERE id_azienda=1 AND codice='75.17.137'
+UNION ALL SELECT 1, id, 'sky', 3 FROM piano_conti WHERE id_azienda=1 AND codice='75.17.503'
+UNION ALL SELECT 1, id, 'rai', 2 FROM piano_conti WHERE id_azienda=1 AND codice='75.17.503'
+UNION ALL SELECT 1, id, 'musicist', 3 FROM piano_conti WHERE id_azienda=1 AND codice='75.17.501'
+UNION ALL SELECT 1, id, 'pulizia', 3 FROM piano_conti WHERE id_azienda=1 AND codice='75.17.013'
+UNION ALL SELECT 1, id, 'sanificazione', 2 FROM piano_conti WHERE id_azienda=1 AND codice='75.17.013'
+UNION ALL SELECT 1, id, 'affitto', 3 FROM piano_conti WHERE id_azienda=1 AND codice='77.09.001'
+UNION ALL SELECT 1, id, 'canone locazione', 3 FROM piano_conti WHERE id_azienda=1 AND codice='77.09.001'
+UNION ALL SELECT 1, id, 'leasing', 3 FROM piano_conti WHERE id_azienda=1 AND codice='77.03.502'
+UNION ALL SELECT 1, id, 'imu', 3 FROM piano_conti WHERE id_azienda=1 AND codice='92.01.005'
+UNION ALL SELECT 1, id, 'tasi', 2 FROM piano_conti WHERE id_azienda=1 AND codice='92.01.005'
+UNION ALL SELECT 1, id, 'consulenza', 3 FROM piano_conti WHERE id_azienda=1 AND codice='75.11.001'
+UNION ALL SELECT 1, id, 'commercialista', 2 FROM piano_conti WHERE id_azienda=1 AND codice='75.11.001'
+UNION ALL SELECT 1, id, 'stipendio', 3 FROM piano_conti WHERE id_azienda=1 AND codice='79.01.005'
+UNION ALL SELECT 1, id, 'salario', 3 FROM piano_conti WHERE id_azienda=1 AND codice='79.01.001'
+UNION ALL SELECT 1, id, 'inps', 3 FROM piano_conti WHERE id_azienda=1 AND codice='79.03.001'
+UNION ALL SELECT 1, id, 'inail', 3 FROM piano_conti WHERE id_azienda=1 AND codice='79.03.005'
+UNION ALL SELECT 1, id, 'demanio', 3 FROM piano_conti WHERE id_azienda=1 AND codice='77.01.500'
+UNION ALL SELECT 1, id, 'concessione', 2 FROM piano_conti WHERE id_azienda=1 AND codice='77.01.500';
+
+SET foreign_key_checks = 1;
