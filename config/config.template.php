@@ -1,5 +1,5 @@
 <?php
-// GestHotel FE - Configurazione applicazione
+// ControlloGestione - Configurazione applicazione
 // Copiare in config.php e compilare con i dati reali
 
 // Database
@@ -10,8 +10,8 @@ define('DB_PASS',    '{{DB_PASS}}');
 define('DB_CHARSET', 'utf8mb4');
 
 // Applicazione
-define('APP_NAME',    'GestHotel FE');
-define('APP_VERSION', '1.0.0');
+define('APP_NAME',    'ControlloGestione');
+define('APP_VERSION', '0.0.1');
 define('APP_URL',     '{{APP_URL}}');   // es. http://localhost/gesthotel
 define('APP_ENV',     'development');   // development | production
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GestHotel FE — Installazione</title>
+<title>ControlloGestione — Installazione</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <style>
@@ -149,7 +149,7 @@ function stepIcon(int $current, int $check): string {
     <div class="card-header bg-primary text-white d-flex align-items-center gap-2 py-3">
       <i class="bi bi-building fs-4"></i>
       <div>
-        <div class="fw-bold fs-5">GestHotel FE — Installazione guidata</div>
+        <div class="fw-bold fs-5">ControlloGestione — Installazione guidata</div>
         <small class="opacity-75">Versione 0.0.1 beta</small>
       </div>
     </div>
@@ -314,7 +314,7 @@ function stepIcon(int $current, int $check): string {
       <div class="text-center py-4">
         <i class="bi bi-check-circle-fill text-success" style="font-size:4rem"></i>
         <h4 class="mt-3 text-success">Installazione completata!</h4>
-        <p class="text-muted">GestHotel FE è pronto all'uso.</p>
+        <p class="text-muted">ControlloGestione è pronto all'uso.</p>
         <div class="alert alert-warning d-inline-block text-start mt-2">
           <i class="bi bi-shield-exclamation me-1"></i>
           <strong>Attenzione:</strong> per sicurezza, eliminare o proteggere la cartella
@@ -329,7 +329,7 @@ function stepIcon(int $current, int $check): string {
 
     </div><!-- /card-body -->
     <div class="card-footer text-muted text-center small">
-      GestHotel FE v0.0.1 beta — Licenza GPL v3 —
+      ControlloGestione v0.0.1 beta — Licenza GPL v3 —
       <a href="https://github.com/dado70/gesthotel-fe" target="_blank" rel="noopener">GitHub</a>
     </div>
   </div>

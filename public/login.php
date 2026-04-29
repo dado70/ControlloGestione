@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </form>
 
   <div class="text-center mt-3 text-muted" style="font-size:.75rem">
-    GestHotel FE v<?= APP_VERSION ?> &mdash;
+    ControlloGestione v<?= APP_VERSION ?> &mdash;
     <a href="https://github.com/dado70/gesthotel-fe" target="_blank" rel="noopener" class="text-muted">GPL v3</a>
   </div>
 </div>

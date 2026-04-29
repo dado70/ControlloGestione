@@ -1,4 +1,4 @@
-// GestHotel FE - JavaScript principale
+// ControlloGestione - JavaScript principale
 
 'use strict';
 

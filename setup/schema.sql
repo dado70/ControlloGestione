@@ -1,4 +1,4 @@
--- GestHotel FE v0.0.1 - Schema Database
+-- ControlloGestione v0.0.1 - Schema Database
 -- Charset: utf8mb4_unicode_ci
 -- Compatibile con MySQL 8.0+
 

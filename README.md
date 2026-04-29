@@ -1,4 +1,4 @@
-# GestHotel FE — Sistema di Controllo di Gestione per Fatture Elettroniche
+# ControlloGestione — Sistema di Controllo di Gestione per Fatture Elettroniche
 
 **Versione:** 0.0.1 (beta)  
 **Licenza:** GNU General Public License v3.0  
@@ -8,7 +8,7 @@
 
 ## Descrizione
 
-GestHotel FE è un sistema web open source di **controllo di gestione** per hotel, progettato per:
+ControlloGestione è un sistema web open source di **controllo di gestione** per hotel, progettato per:
 
 - Importare **fatture elettroniche passive** in formato `.xml` e `.p7m` (FatturaPA FPR12 v1.2)
 - **Classificare i costi** su piano dei conti aziendale e bilancio CEE semplificato
@@ -105,4 +105,4 @@ Per segnalare un bug o proporre una funzionalità, aprire una issue nel reposito
 
 ---
 
-*GestHotel FE è un progetto open source indipendente, non affiliato ad alcun software gestionale commerciale.*
+*ControlloGestione è un progetto open source indipendente, non affiliato ad alcun software gestionale commerciale.*
