@@ -44,6 +44,16 @@ class Database
         return self::query($sql, $params)->fetch();
     }
 
+    public static function execute(string $sql, array $params = []): void
+    {
+        self::query($sql, $params);
+    }
+
+    public static function lastInsertId(): string
+    {
+        return self::getInstance()->lastInsertId();
+    }
+
     public static function insert(string $sql, array $params = []): string
     {
         self::query($sql, $params);

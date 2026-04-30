@@ -258,12 +258,10 @@ function stepIcon(int $current, int $check): string {
       <?php endif; ?>
       <div class="alert alert-info">
         <i class="bi bi-info-circle me-1"></i>
-        Verranno create tutte le tabelle e caricati i dati iniziali:
+        Verranno create tutte le tabelle del database (schema vuoto).
         <ul class="mb-0 mt-1">
-          <li>Piano dei conti Villa Ottone (livelli 1-3, ~400 voci)</li>
-          <li>Centri di costo (CC01–CC09)</li>
-          <li>Keyword per suggeritore automatico conti</li>
-          <li>Azienda: Villa Ottone S.R.L.</li>
+          <li>17 tabelle: aziende, utenti, fatture, piano dei conti, centri di costo, ecc.</li>
+          <li>Nessun dato precaricato: le aziende e i relativi piani dei conti si creano dall'applicazione</li>
         </ul>
       </div>
       <form method="post">

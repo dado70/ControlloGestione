@@ -5,6 +5,7 @@ $activePage = 'aziende';
 require_once dirname(__DIR__, 2) . '/config/config.php';
 require_once dirname(__DIR__, 2) . '/core/Database.php';
 require_once dirname(__DIR__, 2) . '/core/Auth.php';
+require_once dirname(__DIR__, 2) . '/setup/import_pdc.php';
 Auth::init();
 Auth::requireRole('superadmin');
 
@@ -29,6 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $provincia       = strtoupper(trim($_POST['provincia'] ?? ''));
     $codDest         = trim($_POST['codice_destinatario'] ?? '');
     $pec             = trim($_POST['pec_destinatario'] ?? '');
+    $importaPDC      = !empty($_POST['importa_pdc']);
 
     if ($ragioneSociale === '') $errors[] = 'Ragione sociale obbligatoria.';
     if ($partitaIva === '')     $errors[] = 'Partita IVA obbligatoria.';
@@ -36,12 +38,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($errors)) {
         if ($action === 'add') {
             try {
-                Database::execute(
+                $nuovoId = (int)Database::insert(
                     'INSERT INTO aziende (ragione_sociale, partita_iva, codice_fiscale, indirizzo, cap, comune, provincia, codice_destinatario, pec_destinatario)
                      VALUES (?,?,?,?,?,?,?,?,?)',
                     [$ragioneSociale, $partitaIva, $codiceFiscale, $indirizzo, $cap, $comune, $provincia, $codDest, $pec]
                 );
-                $msg = 'Azienda aggiunta.';
+                if ($importaPDC && $nuovoId > 0) {
+                    $pdo = Database::getInstance();
+                    importaPDCTemplate($pdo, $nuovoId);
+                    $msg = 'Azienda aggiunta con piano dei conti predefinito importato.';
+                } else {
+                    $msg = 'Azienda aggiunta.';
+                }
             } catch (\Exception $e) {
                 $msg = 'Errore: ' . $e->getMessage();
                 $msgType = 'danger';
@@ -101,8 +109,8 @@ require_once dirname(__DIR__) . '/layout/header.php';
           <?php foreach ($aziende as $az): ?>
           <tr>
             <td><?= htmlspecialchars($az['ragione_sociale']) ?></td>
-            <td><code><?= htmlspecialchars($az['partita_iva']) ?></code></td>
-            <td><?= htmlspecialchars($az['comune'] . ($az['provincia'] ? ' (' . $az['provincia'] . ')' : '')) ?></td>
+            <td><code><?= htmlspecialchars($az['partita_iva'] ?? '') ?></code></td>
+            <td><?= htmlspecialchars(($az['comune'] ?? '') . ($az['provincia'] ? ' (' . $az['provincia'] . ')' : '')) ?></td>
             <td><?= htmlspecialchars($az['codice_destinatario'] ?? '') ?></td>
             <td>
               <?php if ($az['attiva']): ?>
@@ -194,6 +202,15 @@ require_once dirname(__DIR__) . '/layout/header.php';
               <label class="form-label">PEC destinatario</label>
               <input type="email" name="pec_destinatario" id="fPec" class="form-control">
             </div>
+            <div class="col-12" id="rowImportaPDC">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="importa_pdc" id="fImportaPDC" value="1" checked>
+                <label class="form-check-label" for="fImportaPDC">
+                  Importa piano dei conti e centri di costo predefiniti
+                  <small class="text-muted">(~400 voci + 9 centri di costo alberghieri)</small>
+                </label>
+              </div>
+            </div>
           </div>
         </div>
         <div class="modal-footer">
@@ -212,6 +229,7 @@ document.getElementById('modalAzienda').addEventListener('show.bs.modal', functi
   const action = btn.dataset.action;
   document.getElementById('modalAction').value = action;
   document.getElementById('modalTitolo').textContent = action === 'add' ? 'Nuova azienda' : 'Modifica azienda';
+  document.getElementById('rowImportaPDC').style.display = action === 'add' ? '' : 'none';
   document.getElementById('modalId').value       = btn.dataset.id ?? '';
   document.getElementById('fRagione').value      = btn.dataset.ragione ?? '';
   document.getElementById('fPiva').value         = btn.dataset.piva ?? '';
