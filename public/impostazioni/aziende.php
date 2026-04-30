@@ -5,7 +5,6 @@ $activePage = 'aziende';
 require_once dirname(__DIR__, 2) . '/config/config.php';
 require_once dirname(__DIR__, 2) . '/core/Database.php';
 require_once dirname(__DIR__, 2) . '/core/Auth.php';
-require_once dirname(__DIR__, 2) . '/setup/import_pdc.php';
 Auth::init();
 Auth::requireRole('superadmin');
 
@@ -44,6 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     [$ragioneSociale, $partitaIva, $codiceFiscale, $indirizzo, $cap, $comune, $provincia, $codDest, $pec]
                 );
                 if ($importaPDC && $nuovoId > 0) {
+                    require_once dirname(__DIR__, 2) . '/setup/import_pdc.php';
                     $pdo = Database::getInstance();
                     importaPDCTemplate($pdo, $nuovoId);
                     $msg = 'Azienda aggiunta con piano dei conti predefinito importato.';
