@@ -115,16 +115,22 @@ if ($step === 4 && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Scrivi config.php
             $tpl = file_get_contents(dirname(__DIR__) . '/config/config.template.php');
-            $appUrl = rtrim($cfg['url'] ?: 'http://localhost/gesthotel', '/');
+            $appUrl = rtrim($cfg['url'] ?: 'http://localhost/controllogestione', '/');
             $tpl = str_replace(
                 ['{{DB_HOST}}','{{DB_NAME}}','{{DB_USER}}','{{DB_PASS}}','{{APP_URL}}'],
                 [$cfg['host'], $cfg['name'], $cfg['user'], $cfg['pass'], $appUrl],
                 $tpl
             );
-            file_put_contents(dirname(__DIR__) . '/config/config.php', $tpl);
-
-            unset($_SESSION['install']);
-            header('Location: install.php?step=done'); exit;
+            $configPath = dirname(__DIR__) . '/config/config.php';
+            $written = file_put_contents($configPath, $tpl);
+            if ($written === false) {
+                $adminError = 'Impossibile scrivere config/config.php. '
+                    . 'Verificare che la directory config/ sia scrivibile da Apache (www-data). '
+                    . 'Eseguire: <code>sudo chmod o+w ' . dirname(__DIR__) . '/config/</code>';
+            } else {
+                unset($_SESSION['install']);
+                header('Location: install.php?step=done'); exit;
+            }
         } catch (Throwable $e) {
             $adminError = $e->getMessage();
         }

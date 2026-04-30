@@ -65,6 +65,15 @@ $checks['config_template'] = [
     'valore' => $tplOk ? 'OK' : 'File mancante',
 ];
 
+// Directory config/ scrivibile (necessaria per generare config.php)
+$configDir    = dirname(__DIR__) . '/config/';
+$configDirOk  = is_dir($configDir) && is_writable($configDir);
+$checks['config_dir'] = [
+    'label'  => 'Directory config/ scrivibile',
+    'ok'     => $configDirOk,
+    'valore' => $configDirOk ? 'OK' : 'Non scrivibile — eseguire: chmod o+w ' . $configDir,
+];
+
 // setup/schema.sql presente
 $sqlOk = file_exists(__DIR__ . '/schema.sql');
 $checks['schema_sql'] = [
