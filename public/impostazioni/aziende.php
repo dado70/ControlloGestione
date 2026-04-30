@@ -5,6 +5,7 @@ $activePage = 'aziende';
 require_once dirname(__DIR__, 2) . '/config/config.php';
 require_once dirname(__DIR__, 2) . '/core/Database.php';
 require_once dirname(__DIR__, 2) . '/core/Auth.php';
+require_once dirname(__DIR__, 2) . '/core/PDCImporter.php';
 Auth::init();
 Auth::requireRole('superadmin');
 
@@ -43,9 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     [$ragioneSociale, $partitaIva, $codiceFiscale, $indirizzo, $cap, $comune, $provincia, $codDest, $pec]
                 );
                 if ($importaPDC && $nuovoId > 0) {
-                    require_once dirname(__DIR__, 2) . '/setup/import_pdc.php';
-                    $pdo = Database::getInstance();
-                    importaPDCTemplate($pdo, $nuovoId);
+                    PDCImporter::importa(Database::getInstance(), $nuovoId);
                     $msg = 'Azienda aggiunta con piano dei conti predefinito importato.';
                 } else {
                     $msg = 'Azienda aggiunta.';
@@ -110,10 +109,10 @@ require_once dirname(__DIR__) . '/layout/header.php';
           <tr>
             <td><?= htmlspecialchars($az['ragione_sociale']) ?></td>
             <td><code><?= htmlspecialchars($az['partita_iva'] ?? '') ?></code></td>
-            <td><?= htmlspecialchars(($az['comune'] ?? '') . ($az['provincia'] ? ' (' . $az['provincia'] . ')' : '')) ?></td>
+            <td><?= htmlspecialchars(($az['comune'] ?? '') . (($az['provincia'] ?? '') ? ' (' . $az['provincia'] . ')' : '')) ?></td>
             <td><?= htmlspecialchars($az['codice_destinatario'] ?? '') ?></td>
             <td>
-              <?php if ($az['attiva']): ?>
+              <?php if ($az['attiva'] ?? false): ?>
                 <span class="badge bg-success">Attiva</span>
               <?php else: ?>
                 <span class="badge bg-secondary">Disattiva</span>
