@@ -28,8 +28,10 @@ if (file_exists(dirname(__DIR__) . '/config/config.php')) {
     $cfg = file_get_contents(dirname(__DIR__) . '/config/config.php');
     if (strpos($cfg, '{{') === false) {
         // config.php è compilato → installazione già eseguita
-        // Permettiamo solo se viene passato ?force=1
-        if (empty($_GET['force'])) {
+        // Permettiamo ?step=done (redirect post-installazione) e ?force=1 (reinizializzazione)
+        $isDone  = (($_GET['step'] ?? '') === 'done');
+        $isForce = !empty($_GET['force']);
+        if (!$isDone && !$isForce) {
             die('<div class="container mt-5 alert alert-warning">
                 <strong>Installazione già completata.</strong>
                 Per reinizializzare aggiungere <code>?force=1</code> all\'URL (attenzione: sovrascrive i dati).
