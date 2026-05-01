@@ -31,6 +31,12 @@ if ($user['ruolo'] === 'superadmin') {
     );
 }
 
+// Auto-seleziona la prima azienda disponibile se nessuna è in sessione
+if (!$idAzienda && !empty($aziende)) {
+    Auth::setAzienda((int)$aziende[0]['id']);
+    $idAzienda = Auth::getIdAzienda();
+}
+
 // Dati azienda corrente
 $aziendaCorrente = null;
 if ($idAzienda) {
