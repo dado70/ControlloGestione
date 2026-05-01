@@ -78,6 +78,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                  WHERE id=? AND id_fattura=? AND id_azienda=?',
                 [$idConto, $idCentro, $conferm, $idLinea, $idFattura, $idAzienda]
             );
+
+            // Apprendimento keyword: se confermato manualmente con un conto, aggiungi parole significative
+            if ($conferm && $idConto) {
+                $rigaDesc = Database::fetchOne(
+                    'SELECT descrizione FROM fatture_linee WHERE id=? AND id_azienda=?',
+                    [$idLinea, $idAzienda]
+                );
+                if ($rigaDesc) {
+                    $stopWords = ['della','dello','delle','degli','del','dei','una','uno','per','con','che','dal','dai','nel','nei','gli','alle','alla','sul','sui','tra','fra','anche','come','dopo','prima','ogni','questo','questa','questi','queste'];
+                    $parole = preg_split('/[\s\-\/\(\)\.,:]+/', mb_strtolower($rigaDesc['descrizione'], 'UTF-8'));
+                    foreach ($parole as $p) {
+                        $p = trim($p);
+                        if (mb_strlen($p) >= 4 && !in_array($p, $stopWords, true) && !is_numeric($p)) {
+                            Database::execute(
+                                'INSERT IGNORE INTO keyword_conto (id_azienda, id_conto, keyword, peso)
+                                 VALUES (?,?,?,1)',
+                                [$idAzienda, $idConto, $p]
+                            );
+                        }
+                    }
+                }
+            }
         }
 
         if (isset($_POST['ajax'])) {

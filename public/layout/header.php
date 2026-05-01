@@ -93,6 +93,7 @@ function navLink(string $href, string $icon, string $label, string $active, stri
   <div class="nav-section">Impostazioni</div>
   <?= navLink(APP_URL.'/public/impostazioni/piano_conti.php',  'list-nested',   'Piano dei conti',   $activePage, 'piano_conti') ?>
   <?= navLink(APP_URL.'/public/impostazioni/centri_costo.php', 'tags',          'Centri di costo',   $activePage, 'imp_cc') ?>
+  <?= navLink(APP_URL.'/public/impostazioni/mappatura_cc.php', 'diagram-3',    'Mapp. Conti→CC',    $activePage, 'mappatura_cc') ?>
   <?= navLink(APP_URL.'/public/impostazioni/mappatura_cee.php','arrow-left-right','Mapp. CEE',       $activePage, 'mappatura_cee') ?>
   <?php if (Auth::isSuperadmin()): ?>
   <?= navLink(APP_URL.'/public/impostazioni/aziende.php',      'buildings',     'Aziende',           $activePage, 'aziende') ?>
