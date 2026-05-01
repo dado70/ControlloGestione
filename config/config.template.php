@@ -11,7 +11,7 @@ define('DB_CHARSET', 'utf8mb4');
 
 // Applicazione
 define('APP_NAME',    'ControlloGestione');
-define('APP_VERSION', '0.0.1');
+define('APP_VERSION', '1.0.0');
 define('APP_URL',     '{{APP_URL}}');   // es. http://localhost/gesthotel
 define('APP_ENV',     'development');   // development | production
 
