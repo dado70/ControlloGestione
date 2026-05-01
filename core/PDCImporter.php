@@ -12,10 +12,13 @@ class PDCImporter
             throw new RuntimeException('File template PDC non trovato: ' . $tpl);
         }
 
-        $sql = str_replace('__ID__', (string)$idAzienda, file_get_contents($tpl));
+        $raw = file_get_contents($tpl);
+        $raw = str_replace('__ID__', (string)$idAzienda, $raw);
+        // Rimuove le righe di commento SQL (--) prima di dividere per ";"
+        $sql = preg_replace('/^--[^\n]*$/m', '', $raw);
 
         foreach (array_filter(array_map('trim', explode(';', $sql))) as $stmt) {
-            if ($stmt !== '' && !str_starts_with($stmt, '--')) {
+            if ($stmt !== '') {
                 $pdo->exec($stmt);
             }
         }
