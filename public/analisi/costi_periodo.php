@@ -18,12 +18,13 @@ $anniDisp = $idAzienda ? Database::fetchAll(
 
 $annoDefault = (int)date('Y');
 
-// Parametri filtro
-$anno      = (int)($_GET['anno']      ?? $annoDefault);
-$meseDa    = (int)($_GET['mese_da']   ?? 1);
-$meseA     = (int)($_GET['mese_a']    ?? 12);
-$idCentro  = isset($_GET['id_centro']) && $_GET['id_centro'] !== '' ? (int)$_GET['id_centro'] : null;
-$export    = isset($_GET['export']) && $_GET['export'] === 'csv';
+// Parametri filtro — anno='' significa tutti gli anni
+$annoStr  = $_GET['anno'] ?? (string)$annoDefault;
+$anno     = ($annoStr !== '') ? (int)$annoStr : null;
+$meseDa   = (int)($_GET['mese_da']   ?? 1);
+$meseA    = (int)($_GET['mese_a']    ?? 12);
+$idCentro = isset($_GET['id_centro']) && $_GET['id_centro'] !== '' ? (int)$_GET['id_centro'] : null;
+$export   = isset($_GET['export']) && $_GET['export'] === 'csv';
 
 // Vincola mesi al range valido
 $meseDa = max(1, min(12, $meseDa));
@@ -41,38 +42,55 @@ $contiInfo = [];
 
 if ($idAzienda) {
     $extraWhere = '';
-    $params = [$idAzienda, $anno, $meseDa, $meseA];
+    $annoWhere  = '';
+    $params     = [$idAzienda];
+
+    if ($anno !== null) {
+        $annoWhere = 'AND YEAR(fe.data_documento) = ? AND MONTH(fe.data_documento) BETWEEN ? AND ?';
+        $params[]  = $anno;
+        $params[]  = $meseDa;
+        $params[]  = $meseA;
+    }
     if ($idCentro !== null) {
         $extraWhere = ' AND fl.id_centro_costo = ?';
-        $params[] = $idCentro;
+        $params[]   = $idCentro;
     }
 
+    // Quando tutti gli anni, raggruppa per anno invece che per mese
+    $groupCol  = $anno !== null ? 'MONTH(fe.data_documento)' : 'YEAR(fe.data_documento)';
     $rows = Database::fetchAll(
         "SELECT pc.id, pc.codice, pc.descrizione,
-                MONTH(fe.data_documento) as mese,
+                $groupCol as periodo,
                 SUM(fl.prezzo_totale) as importo
          FROM fatture_linee fl
          JOIN fatture_elettroniche fe ON fe.id = fl.id_fattura
          JOIN piano_conti pc ON pc.id = fl.id_conto
          WHERE fl.id_azienda = ?
-           AND YEAR(fe.data_documento) = ?
-           AND MONTH(fe.data_documento) BETWEEN ? AND ?
+           $annoWhere
            AND fl.id_conto IS NOT NULL
            $extraWhere
-         GROUP BY pc.id, pc.codice, pc.descrizione, MONTH(fe.data_documento)
-         ORDER BY pc.codice, mese",
+         GROUP BY pc.id, pc.codice, pc.descrizione, $groupCol
+         ORDER BY pc.codice, periodo",
         $params
     );
 
     foreach ($rows as $r) {
         $key = $r['id'];
         $contiInfo[$key] = ['codice' => $r['codice'], 'descrizione' => $r['descrizione']];
-        $pivot[$key][(int)$r['mese']] = (float)$r['importo'];
+        $pivot[$key][(int)$r['periodo']] = (float)$r['importo'];
     }
 }
 
-// Colonne mesi selezionati
-$mesiColonne = range($meseDa, $meseA);
+// Colonne: mesi (anno specifico) o anni (tutti gli anni)
+if ($anno !== null) {
+    $mesiColonne  = range($meseDa, $meseA);
+    $colonneLabel = array_map(fn($m) => $mesiLabel[$m-1], $mesiColonne);
+} else {
+    $tuttiAnni   = array_unique(array_merge(...array_map('array_keys', array_values($pivot) ?: [[]])));
+    sort($tuttiAnni);
+    $mesiColonne  = $tuttiAnni ?: [(int)date('Y')];
+    $colonneLabel = $mesiColonne; // label = anno
+}
 
 // Totali colonna
 $totaliColonna = [];
@@ -135,12 +153,13 @@ if ($export && $idAzienda) {
       <div class="col-sm-2">
         <label class="form-label small mb-1">Anno</label>
         <select name="anno" class="form-select form-select-sm">
+          <option value="" <?= $anno === null ? 'selected' : '' ?>>Tutti gli anni</option>
           <?php foreach ($anniDisp as $ar): ?>
-          <option value="<?= $ar['anno'] ?>" <?= (int)$ar['anno'] === $anno ? 'selected' : '' ?>>
+          <option value="<?= $ar['anno'] ?>" <?= $anno === (int)$ar['anno'] ? 'selected' : '' ?>>
             <?= $ar['anno'] ?>
           </option>
           <?php endforeach; ?>
-          <?php if (empty($anniDisp)): ?>
+          <?php if (empty($anniDisp) && $anno !== null): ?>
           <option value="<?= $anno ?>" selected><?= $anno ?></option>
           <?php endif; ?>
         </select>
@@ -200,8 +219,8 @@ if ($export && $idAzienda) {
         <tr>
           <th>Codice</th>
           <th>Descrizione conto</th>
-          <?php foreach ($mesiColonne as $m): ?>
-          <th class="text-end"><?= $mesiLabel[$m-1] ?></th>
+          <?php foreach ($mesiColonne as $i => $m): ?>
+          <th class="text-end"><?= htmlspecialchars((string)$colonneLabel[$i]) ?></th>
           <?php endforeach; ?>
           <th class="text-end fw-bold">Totale</th>
         </tr>

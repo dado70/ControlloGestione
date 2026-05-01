@@ -14,8 +14,9 @@ $anniDisp = $idAzienda ? Database::fetchAll(
     [$idAzienda]
 ) : [];
 
-$anno  = (int)($_GET['anno'] ?? (int)date('Y'));
-$mese  = isset($_GET['mese']) && $_GET['mese'] !== '' ? (int)$_GET['mese'] : (int)date('n');
+$annoStr = $_GET['anno'] ?? (string)(int)date('Y');
+$anno    = ($annoStr !== '') ? (int)$annoStr : null;
+$mese    = isset($_GET['mese']) && $_GET['mese'] !== '' ? (int)$_GET['mese'] : (int)date('n');
 
 $mesiLabel = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
 
@@ -24,36 +25,53 @@ $totMese = 0.0;
 $totYtd  = 0.0;
 
 if ($idAzienda) {
-    // Costi del mese per ogni centro (solo righe confermate)
-    $rowsMese = Database::fetchAll(
-        'SELECT cc.id, cc.codice, cc.descrizione, cc.tipo,
-                SUM(fl.prezzo_totale) as costi_mese,
-                COUNT(DISTINCT fe.id) as n_fatture
-         FROM centri_costo cc
-         LEFT JOIN fatture_linee fl ON fl.id_centro_costo = cc.id
-             AND fl.classificazione_confermata = 1
-             AND fl.id_azienda = cc.id_azienda
-         LEFT JOIN fatture_elettroniche fe ON fe.id = fl.id_fattura
-             AND YEAR(fe.data_documento) = ? AND MONTH(fe.data_documento) = ?
-         WHERE cc.id_azienda = ? AND cc.attivo = 1
-         GROUP BY cc.id, cc.codice, cc.descrizione, cc.tipo
-         ORDER BY cc.ordine, cc.codice',
-        [$anno, $mese, $idAzienda]
-    );
-
-    // YTD per ogni centro (da gennaio al mese selezionato)
-    $rowsYtd = Database::fetchAll(
-        'SELECT cc.id, SUM(fl.prezzo_totale) as costi_ytd
-         FROM centri_costo cc
-         LEFT JOIN fatture_linee fl ON fl.id_centro_costo = cc.id
-             AND fl.classificazione_confermata = 1
-             AND fl.id_azienda = cc.id_azienda
-         LEFT JOIN fatture_elettroniche fe ON fe.id = fl.id_fattura
-             AND YEAR(fe.data_documento) = ? AND MONTH(fe.data_documento) <= ?
-         WHERE cc.id_azienda = ? AND cc.attivo = 1
-         GROUP BY cc.id',
-        [$anno, $mese, $idAzienda]
-    );
+    // Costi del mese/periodo per ogni centro (solo righe confermate)
+    if ($anno !== null) {
+        $rowsMese = Database::fetchAll(
+            'SELECT cc.id, cc.codice, cc.descrizione, cc.tipo,
+                    SUM(fl.prezzo_totale) as costi_mese,
+                    COUNT(DISTINCT fe.id) as n_fatture
+             FROM centri_costo cc
+             LEFT JOIN fatture_linee fl ON fl.id_centro_costo = cc.id
+                 AND fl.classificazione_confermata = 1
+                 AND fl.id_azienda = cc.id_azienda
+             LEFT JOIN fatture_elettroniche fe ON fe.id = fl.id_fattura
+                 AND YEAR(fe.data_documento) = ? AND MONTH(fe.data_documento) = ?
+             WHERE cc.id_azienda = ? AND cc.attivo = 1
+             GROUP BY cc.id, cc.codice, cc.descrizione, cc.tipo
+             ORDER BY cc.ordine, cc.codice',
+            [$anno, $mese, $idAzienda]
+        );
+        $rowsYtd = Database::fetchAll(
+            'SELECT cc.id, SUM(fl.prezzo_totale) as costi_ytd
+             FROM centri_costo cc
+             LEFT JOIN fatture_linee fl ON fl.id_centro_costo = cc.id
+                 AND fl.classificazione_confermata = 1
+                 AND fl.id_azienda = cc.id_azienda
+             LEFT JOIN fatture_elettroniche fe ON fe.id = fl.id_fattura
+                 AND YEAR(fe.data_documento) = ? AND MONTH(fe.data_documento) <= ?
+             WHERE cc.id_azienda = ? AND cc.attivo = 1
+             GROUP BY cc.id',
+            [$anno, $mese, $idAzienda]
+        );
+    } else {
+        // Tutti gli anni: costi_mese = totale storico, costi_ytd = idem
+        $rowsMese = Database::fetchAll(
+            'SELECT cc.id, cc.codice, cc.descrizione, cc.tipo,
+                    SUM(fl.prezzo_totale) as costi_mese,
+                    COUNT(DISTINCT fe.id) as n_fatture
+             FROM centri_costo cc
+             LEFT JOIN fatture_linee fl ON fl.id_centro_costo = cc.id
+                 AND fl.classificazione_confermata = 1
+                 AND fl.id_azienda = cc.id_azienda
+             LEFT JOIN fatture_elettroniche fe ON fe.id = fl.id_fattura
+             WHERE cc.id_azienda = ? AND cc.attivo = 1
+             GROUP BY cc.id, cc.codice, cc.descrizione, cc.tipo
+             ORDER BY cc.ordine, cc.codice',
+            [$idAzienda]
+        );
+        $rowsYtd = $rowsMese; // stessa query, identico risultato
+    }
 
     $ytdMap = [];
     foreach ($rowsYtd as $r) {
@@ -88,10 +106,11 @@ if ($idAzienda) {
       <div class="col-sm-2">
         <label class="form-label small mb-1">Anno</label>
         <select name="anno" class="form-select form-select-sm">
+          <option value="" <?= $anno === null ? 'selected' : '' ?>>Tutti gli anni</option>
           <?php foreach ($anniDisp as $ar): ?>
-          <option value="<?= $ar['anno'] ?>" <?= (int)$ar['anno'] === $anno ? 'selected' : '' ?>><?= $ar['anno'] ?></option>
+          <option value="<?= $ar['anno'] ?>" <?= $anno === (int)$ar['anno'] ? 'selected' : '' ?>><?= $ar['anno'] ?></option>
           <?php endforeach; ?>
-          <?php if (empty($anniDisp)): ?>
+          <?php if (empty($anniDisp) && $anno !== null): ?>
           <option value="<?= $anno ?>" selected><?= $anno ?></option>
           <?php endif; ?>
         </select>
@@ -115,7 +134,9 @@ if ($idAzienda) {
 
 <!-- Info periodo -->
 <div class="mb-2 small text-muted">
-  Periodo: <strong><?= $mesiLabel[$mese-1] ?> <?= $anno ?></strong> — solo righe con classificazione confermata.
+  Periodo: <strong>
+  <?= $anno !== null ? $mesiLabel[$mese-1] . ' ' . $anno : 'Tutti gli anni' ?>
+  </strong> — solo righe con classificazione confermata.
 </div>
 
 <!-- Tabella centri di costo -->
@@ -127,8 +148,8 @@ if ($idAzienda) {
           <th>Codice</th>
           <th>Centro di costo</th>
           <th>Tipo</th>
-          <th class="text-end">Costi mese (€)</th>
-          <th class="text-end">Costi YTD (€)</th>
+          <th class="text-end"><?= $anno !== null ? 'Costi mese (€)' : 'Totale storico (€)' ?></th>
+          <th class="text-end"><?= $anno !== null ? 'Costi YTD (€)'  : 'Totale storico (€)' ?></th>
           <th class="text-center">N. fatture</th>
         </tr>
       </thead>

@@ -14,9 +14,10 @@ $anniDisp = $idAzienda ? Database::fetchAll(
     [$idAzienda]
 ) : [];
 
-$anno      = (int)($_GET['anno']    ?? (int)date('Y'));
-$meseDa    = (int)($_GET['mese_da'] ?? 1);
-$meseA     = (int)($_GET['mese_a']  ?? 12);
+$annoStr    = $_GET['anno'] ?? (string)(int)date('Y');
+$anno       = ($annoStr !== '') ? (int)$annoStr : null;
+$meseDa     = (int)($_GET['mese_da'] ?? 1);
+$meseA      = (int)($_GET['mese_a']  ?? 12);
 $detCedente = isset($_GET['cedente']) && $_GET['cedente'] !== '' ? (int)$_GET['cedente'] : null;
 
 $meseDa = max(1, min(12, $meseDa));
@@ -30,17 +31,21 @@ $chartLabels = [];
 $chartData   = [];
 
 if ($idAzienda) {
+    $annoWhere = $anno !== null
+        ? 'AND YEAR(fe.data_documento) = ? AND MONTH(fe.data_documento) BETWEEN ? AND ?'
+        : '';
+    $annoParams = $anno !== null ? [$anno, $meseDa, $meseA] : [];
+
     $ranking = Database::fetchAll(
         'SELECT cp.id, cp.denominazione, cp.nome, cp.cognome, cp.id_codice,
                 COUNT(fe.id) as n_fatture,
                 SUM(fe.importo_totale) as totale
          FROM fatture_elettroniche fe
          JOIN cedenti_prestatori cp ON cp.id = fe.id_cedente
-         WHERE fe.id_azienda = ? AND YEAR(fe.data_documento) = ?
-           AND MONTH(fe.data_documento) BETWEEN ? AND ?
+         WHERE fe.id_azienda = ? ' . $annoWhere . '
          GROUP BY cp.id, cp.denominazione, cp.nome, cp.cognome, cp.id_codice
          ORDER BY totale DESC',
-        [$idAzienda, $anno, $meseDa, $meseA]
+        array_merge([$idAzienda], $annoParams)
     );
 
     foreach ($ranking as $r) {
@@ -98,10 +103,11 @@ function nomeForn(array $r): string {
       <div class="col-sm-2">
         <label class="form-label small mb-1">Anno</label>
         <select name="anno" class="form-select form-select-sm">
+          <option value="" <?= $anno === null ? 'selected' : '' ?>>Tutti gli anni</option>
           <?php foreach ($anniDisp as $ar): ?>
-          <option value="<?= $ar['anno'] ?>" <?= (int)$ar['anno'] === $anno ? 'selected' : '' ?>><?= $ar['anno'] ?></option>
+          <option value="<?= $ar['anno'] ?>" <?= $anno === (int)$ar['anno'] ? 'selected' : '' ?>><?= $ar['anno'] ?></option>
           <?php endforeach; ?>
-          <?php if (empty($anniDisp)): ?>
+          <?php if (empty($anniDisp) && $anno !== null): ?>
           <option value="<?= $anno ?>" selected><?= $anno ?></option>
           <?php endif; ?>
         </select>
@@ -136,8 +142,8 @@ function nomeForn(array $r): string {
   <div class="col-lg-7">
     <div class="card shadow-sm border-0">
       <div class="card-header bg-white fw-semibold border-bottom-0">
-        <i class="bi bi-trophy me-2 text-warning"></i>Ranking fornitori — <?= $anno ?>
-        (<?= $mesiLabel[$meseDa-1] ?>–<?= $mesiLabel[$meseA-1] ?>)
+        <i class="bi bi-trophy me-2 text-warning"></i>Ranking fornitori —
+        <?= $anno !== null ? $anno . ' (' . $mesiLabel[$meseDa-1] . '–' . $mesiLabel[$meseA-1] . ')' : 'tutti gli anni' ?>
       </div>
       <div class="table-responsive">
         <table class="table table-gh table-hover mb-0">
