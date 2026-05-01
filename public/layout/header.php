@@ -95,6 +95,7 @@ function navLink(string $href, string $icon, string $label, string $active, stri
   <?= navLink(APP_URL.'/public/impostazioni/centri_costo.php', 'tags',          'Centri di costo',   $activePage, 'imp_cc') ?>
   <?= navLink(APP_URL.'/public/impostazioni/mappatura_cc.php', 'diagram-3',    'Mapp. Conti→CC',    $activePage, 'mappatura_cc') ?>
   <?= navLink(APP_URL.'/public/impostazioni/mappatura_cee.php','arrow-left-right','Mapp. CEE',       $activePage, 'mappatura_cee') ?>
+  <?= navLink(APP_URL.'/public/impostazioni/keywords.php',     'key',          'Keyword',           $activePage, 'keywords') ?>
   <?php if (Auth::isSuperadmin()): ?>
   <?= navLink(APP_URL.'/public/impostazioni/aziende.php',      'buildings',     'Aziende',           $activePage, 'aziende') ?>
   <?= navLink(APP_URL.'/public/impostazioni/utenti.php',       'people',        'Utenti',            $activePage, 'utenti') ?>

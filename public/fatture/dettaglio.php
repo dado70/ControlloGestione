@@ -1,15 +1,109 @@
 <?php
-
 declare(strict_types=1);
-$pageTitle  = 'Dettaglio fattura';
-$activePage = 'fatture';
-require_once dirname(__DIR__) . '/layout/header.php';
 
+// Carica dipendenze senza output (le POST devono rispondere prima dell'HTML)
+require_once dirname(__DIR__, 2) . '/config/config.php';
+require_once dirname(__DIR__, 2) . '/core/Database.php';
+require_once dirname(__DIR__, 2) . '/core/Auth.php';
+Auth::init();
 Auth::requireLogin();
 
 $idAzienda = Auth::getIdAzienda();
-$csrfToken = Auth::csrfToken();
 $idFattura = (int)($_GET['id'] ?? 0);
+
+// ── Gestione POST (prima di qualsiasi output HTML) ───────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $csrfOk = hash_equals(Auth::csrfToken(), $_POST['csrf_token'] ?? '');
+
+    if (!$csrfOk) {
+        if (!empty($_POST['ajax'])) {
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => false, 'error' => 'CSRF non valido.']);
+            exit;
+        }
+        http_response_code(419);
+        die('CSRF token non valido.');
+    }
+
+    $action = $_POST['action'] ?? '';
+
+    // Cambio stato (POST normale, redirect)
+    if ($action === 'cambia_stato') {
+        $statiValidi = ['importata','verificata','contabilizzata','pagata','annullata'];
+        $s = $_POST['stato'] ?? '';
+        if (in_array($s, $statiValidi, true) && $idAzienda && $idFattura) {
+            Database::execute(
+                'UPDATE fatture_elettroniche SET stato=? WHERE id=? AND id_azienda=?',
+                [$s, $idFattura, $idAzienda]
+            );
+        }
+        header('Location: dettaglio.php?id=' . $idFattura);
+        exit;
+    }
+
+    // Conferma tutto (POST normale, redirect)
+    if ($action === 'conferma_tutto' && Auth::canWrite() && $idAzienda && $idFattura) {
+        Database::execute(
+            'UPDATE fatture_linee SET classificazione_confermata=1
+             WHERE id_fattura=? AND id_azienda=?',
+            [$idFattura, $idAzienda]
+        );
+        header('Location: dettaglio.php?id=' . $idFattura . '&saved=1');
+        exit;
+    }
+
+    // Salva classificazione (AJAX)
+    if ($action === 'salva_classificazione' && Auth::canWrite() && $idAzienda && $idFattura) {
+        $stopWords = ['della','dello','delle','degli','del','dei','una','uno','per','con','che',
+                      'dal','dai','nel','nei','gli','alle','alla','sul','sui','tra','fra','anche',
+                      'come','dopo','prima','ogni','questo','questa','questi','queste','anno',
+                      'mese','data','numero','codice','fatt','doc'];
+        $lineePost = $_POST['linee'] ?? [];
+        foreach ($lineePost as $idLinea => $dati) {
+            $idLinea  = (int)$idLinea;
+            $idConto  = isset($dati['id_conto'])  && $dati['id_conto']  !== '' ? (int)$dati['id_conto']  : null;
+            $idCentro = isset($dati['id_centro']) && $dati['id_centro'] !== '' ? (int)$dati['id_centro'] : null;
+            $conferm  = isset($dati['confermata']) ? 1 : 0;
+
+            Database::execute(
+                'UPDATE fatture_linee
+                 SET id_conto=?, id_centro_costo=?, classificazione_confermata=?
+                 WHERE id=? AND id_fattura=? AND id_azienda=?',
+                [$idConto, $idCentro, $conferm, $idLinea, $idFattura, $idAzienda]
+            );
+
+            // Apprendimento keyword automatico quando confermato con un conto
+            if ($conferm && $idConto) {
+                $riga = Database::fetchOne(
+                    'SELECT descrizione FROM fatture_linee WHERE id=? AND id_azienda=?',
+                    [$idLinea, $idAzienda]
+                );
+                if ($riga) {
+                    $parole = preg_split('/[\s\-\/\(\)\.,;:]+/', mb_strtolower($riga['descrizione'], 'UTF-8'));
+                    foreach ($parole as $p) {
+                        $p = trim($p);
+                        if (mb_strlen($p) >= 4 && !in_array($p, $stopWords, true) && !is_numeric($p)) {
+                            Database::execute(
+                                'INSERT IGNORE INTO keyword_conto (id_azienda, id_conto, keyword, peso)
+                                 VALUES (?,?,?,1)',
+                                [$idAzienda, $idConto, $p]
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode(['ok' => true]);
+        exit;
+    }
+}
+// ── Fine POST ────────────────────────────────────────────────────────────────
+
+$pageTitle  = 'Dettaglio fattura';
+$activePage = 'fatture';
+require_once dirname(__DIR__) . '/layout/header.php';
 
 if (!$idAzienda || !$idFattura) {
     echo '<div class="alert alert-danger">Parametri non validi.</div>';
@@ -17,7 +111,6 @@ if (!$idAzienda || !$idFattura) {
     exit;
 }
 
-// Carica fattura
 $fattura = Database::fetchOne(
     'SELECT fe.*, cp.denominazione, cp.nome as cp_nome, cp.cognome as cp_cognome,
             cp.id_codice, cp.sede_comune, cp.sede_provincia, cp.regime_fiscale
@@ -33,124 +126,37 @@ if (!$fattura) {
     exit;
 }
 
-$pageTitle = 'Fattura ' . $fattura['numero_documento'];
+$csrfToken = Auth::csrfToken();
 
-// Gestione POST: salva classificazione (AJAX) o cambio stato
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!hash_equals($csrfToken, $_POST['csrf_token'] ?? '')) {
-        if (isset($_POST['ajax'])) {
-            header('Content-Type: application/json');
-            echo json_encode(['ok' => false, 'error' => 'Token CSRF non valido.']);
-            exit;
-        }
-        die('Token CSRF non valido.');
-    }
-
-    $action = $_POST['action'] ?? '';
-
-    // Cambio stato
-    if ($action === 'cambia_stato') {
-        $stati = ['importata', 'verificata', 'contabilizzata', 'pagata', 'annullata'];
-        $s = $_POST['stato'] ?? '';
-        if (in_array($s, $stati, true)) {
-            Database::query(
-                'UPDATE fatture_elettroniche SET stato=? WHERE id=? AND id_azienda=?',
-                [$s, $idFattura, $idAzienda]
-            );
-            $fattura['stato'] = $s;
-        }
-        header('Location: dettaglio.php?id=' . $idFattura);
-        exit;
-    }
-
-    // Salva classificazione (AJAX o normale)
-    if ($action === 'salva_classificazione') {
-        $linee = $_POST['linee'] ?? [];
-        foreach ($linee as $idLinea => $dati) {
-            $idLinea  = (int)$idLinea;
-            $idConto  = isset($dati['id_conto']) && $dati['id_conto'] !== '' ? (int)$dati['id_conto'] : null;
-            $idCentro = isset($dati['id_centro']) && $dati['id_centro'] !== '' ? (int)$dati['id_centro'] : null;
-            $conferm  = isset($dati['confermata']) ? 1 : 0;
-
-            Database::query(
-                'UPDATE fatture_linee
-                 SET id_conto=?, id_centro_costo=?, classificazione_confermata=?
-                 WHERE id=? AND id_fattura=? AND id_azienda=?',
-                [$idConto, $idCentro, $conferm, $idLinea, $idFattura, $idAzienda]
-            );
-
-            // Apprendimento keyword: se confermato manualmente con un conto, aggiungi parole significative
-            if ($conferm && $idConto) {
-                $rigaDesc = Database::fetchOne(
-                    'SELECT descrizione FROM fatture_linee WHERE id=? AND id_azienda=?',
-                    [$idLinea, $idAzienda]
-                );
-                if ($rigaDesc) {
-                    $stopWords = ['della','dello','delle','degli','del','dei','una','uno','per','con','che','dal','dai','nel','nei','gli','alle','alla','sul','sui','tra','fra','anche','come','dopo','prima','ogni','questo','questa','questi','queste'];
-                    $parole = preg_split('/[\s\-\/\(\)\.,:]+/', mb_strtolower($rigaDesc['descrizione'], 'UTF-8'));
-                    foreach ($parole as $p) {
-                        $p = trim($p);
-                        if (mb_strlen($p) >= 4 && !in_array($p, $stopWords, true) && !is_numeric($p)) {
-                            Database::execute(
-                                'INSERT IGNORE INTO keyword_conto (id_azienda, id_conto, keyword, peso)
-                                 VALUES (?,?,?,1)',
-                                [$idAzienda, $idConto, $p]
-                            );
-                        }
-                    }
-                }
-            }
-        }
-
-        if (isset($_POST['ajax'])) {
-            header('Content-Type: application/json');
-            echo json_encode(['ok' => true]);
-            exit;
-        }
-        header('Location: dettaglio.php?id=' . $idFattura . '&saved=1');
-        exit;
-    }
-
-    // Conferma tutto (imposta tutte le righe come confermate)
-    if ($action === 'conferma_tutto' && Auth::canWrite()) {
-        Database::query(
-            'UPDATE fatture_linee SET classificazione_confermata=1
-             WHERE id_fattura=? AND id_azienda=?',
-            [$idFattura, $idAzienda]
-        );
-        header('Location: dettaglio.php?id=' . $idFattura . '&saved=1');
-        exit;
-    }
-}
-
-// Carica linee
 $linee = Database::fetchAll(
-    'SELECT * FROM fatture_linee WHERE id_fattura=? AND id_azienda=? ORDER BY numero_linea',
+    'SELECT fl.*,
+            pc.codice AS conto_codice, pc.descrizione AS conto_desc,
+            cc.codice AS cc_codice,   cc.descrizione  AS cc_desc
+     FROM fatture_linee fl
+     LEFT JOIN piano_conti pc ON pc.id = fl.id_conto
+     LEFT JOIN centri_costo cc ON cc.id = fl.id_centro_costo
+     WHERE fl.id_fattura=? AND fl.id_azienda=? ORDER BY fl.numero_linea',
     [$idFattura, $idAzienda]
 );
 
-// Carica riepilogo IVA
 $riepilogoIva = Database::fetchAll(
     'SELECT * FROM fatture_riepilogo_iva WHERE id_fattura=? ORDER BY aliquota_iva',
     [$idFattura]
 );
 
-// Opzioni piano dei conti (solo livello 3, tipo COSTO)
 $opzioniConti = Database::fetchAll(
     'SELECT id, codice, descrizione FROM piano_conti
-     WHERE id_azienda=? AND livello=3 AND attivo=1
-     ORDER BY codice',
+     WHERE id_azienda=? AND livello=3 AND attivo=1 ORDER BY codice',
     [$idAzienda]
 );
 
-// Opzioni centri di costo
 $opzioniCentri = Database::fetchAll(
     'SELECT id, codice, descrizione FROM centri_costo
      WHERE id_azienda=? AND attivo=1 ORDER BY ordine, codice',
     [$idAzienda]
 );
 
-$stati = ['importata', 'verificata', 'contabilizzata', 'pagata', 'annullata'];
+$stati = ['importata','verificata','contabilizzata','pagata','annullata'];
 $statiBadge = [
     'importata'      => 'bg-warning text-dark',
     'verificata'     => 'bg-info text-dark',
@@ -188,7 +194,6 @@ $nomeFornitore = !empty($fattura['denominazione'])
             <?= ucfirst($fattura['stato']) ?>
           </span>
         </div>
-
         <div class="row g-2 small">
           <div class="col-sm-6">
             <div class="fw-semibold text-muted text-uppercase small mb-1">Fornitore</div>
@@ -280,57 +285,55 @@ $nomeFornitore = !empty($fattura['denominazione'])
     <form id="formClassifica" method="post">
       <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
       <input type="hidden" name="action" value="salva_classificazione">
-      <input type="hidden" name="ajax" value="1">
       <table class="table table-gh table-hover mb-0 align-middle">
         <thead class="table-light">
           <tr>
             <th class="text-center" style="width:40px">#</th>
             <th>Descrizione</th>
-            <th class="text-center">Qtà</th>
-            <th>U.M.</th>
-            <th class="text-end">P.Unit.</th>
-            <th class="text-end">Totale</th>
+            <th class="text-end">Totale €</th>
             <th class="text-center">IVA%</th>
-            <th style="min-width:180px">Conto</th>
-            <th style="min-width:140px">Centro costo</th>
+            <th style="min-width:220px">Conto</th>
+            <th style="min-width:160px">Centro costo</th>
             <th class="text-center">OK</th>
           </tr>
         </thead>
         <tbody>
         <?php foreach ($linee as $linea): ?>
-        <?php $rowClass = !$linea['classificazione_confermata'] ? 'table-warning' : ''; ?>
-        <tr class="<?= $rowClass ?>">
+        <tr class="<?= !$linea['classificazione_confermata'] ? 'table-warning' : '' ?>">
           <td class="text-center"><?= (int)$linea['numero_linea'] ?></td>
           <td>
             <div><?= htmlspecialchars($linea['descrizione']) ?></div>
-            <?php if ($linea['data_inizio_periodo'] || $linea['data_fine_periodo']): ?>
+            <?php if ($linea['quantita'] !== null): ?>
             <div class="small text-muted">
-              <?= htmlspecialchars($linea['data_inizio_periodo'] ?? '') ?>
-              — <?= htmlspecialchars($linea['data_fine_periodo'] ?? '') ?>
+              Qtà: <?= number_format((float)$linea['quantita'], 2, ',', '') ?>
+              <?= htmlspecialchars($linea['unita_misura'] ?? '') ?>
+              <?= $linea['prezzo_unitario'] !== null ? '× ' . number_format((float)$linea['prezzo_unitario'], 4, ',', '.') : '' ?>
             </div>
             <?php endif; ?>
-          </td>
-          <td class="text-center"><?= $linea['quantita'] !== null ? number_format((float)$linea['quantita'], 2, ',', '') : '—' ?></td>
-          <td><?= htmlspecialchars($linea['unita_misura'] ?? '') ?></td>
-          <td class="text-end text-nowrap">
-            <?= $linea['prezzo_unitario'] !== null ? number_format((float)$linea['prezzo_unitario'], 4, ',', '.') : '—' ?>
+            <?php if ($linea['data_inizio_periodo']): ?>
+            <div class="small text-muted">
+              <?= htmlspecialchars($linea['data_inizio_periodo']) ?> — <?= htmlspecialchars($linea['data_fine_periodo'] ?? '') ?>
+            </div>
+            <?php endif; ?>
           </td>
           <td class="text-end fw-semibold text-nowrap">
             <?= number_format((float)$linea['prezzo_totale'], 2, ',', '.') ?>
           </td>
-          <td class="text-center"><?= $linea['aliquota_iva'] !== null ? (float)$linea['aliquota_iva'] . '%' : ($linea['natura_iva'] ?? '—') ?></td>
+          <td class="text-center">
+            <?= $linea['aliquota_iva'] !== null ? (float)$linea['aliquota_iva'] . '%' : htmlspecialchars($linea['natura_iva'] ?? '—') ?>
+          </td>
           <td>
             <?php if (Auth::canWrite()): ?>
             <select name="linee[<?= $linea['id'] ?>][id_conto]" class="form-select form-select-sm">
               <option value="">— nessuno —</option>
               <?php foreach ($opzioniConti as $c): ?>
               <option value="<?= $c['id'] ?>" <?= (int)$linea['id_conto'] === (int)$c['id'] ? 'selected' : '' ?>>
-                <?= htmlspecialchars($c['codice'] . ' ' . $c['descrizione']) ?>
+                <?= htmlspecialchars($c['codice'] . ' ' . mb_substr($c['descrizione'], 0, 35)) ?>
               </option>
               <?php endforeach; ?>
             </select>
             <?php else: ?>
-            <?= htmlspecialchars($linea['id_conto'] ?? '—') ?>
+            <span class="small"><?= htmlspecialchars(($linea['conto_codice'] ?? '') . ' ' . ($linea['conto_desc'] ?? '—')) ?></span>
             <?php endif; ?>
           </td>
           <td>
@@ -344,7 +347,7 @@ $nomeFornitore = !empty($fattura['denominazione'])
               <?php endforeach; ?>
             </select>
             <?php else: ?>
-            <?= htmlspecialchars($linea['id_centro_costo'] ?? '—') ?>
+            <span class="small"><?= htmlspecialchars(($linea['cc_codice'] ?? '') . ' ' . ($linea['cc_desc'] ?? '—')) ?></span>
             <?php endif; ?>
           </td>
           <td class="text-center">
@@ -414,8 +417,7 @@ $nomeFornitore = !empty($fattura['denominazione'])
 <?php endif; ?>
 
 <?php
-$extraJs = '
-<script>
+$extraJs = '<script>
 (function () {
     const btn  = document.getElementById("btnSalva");
     const form = document.getElementById("formClassifica");
@@ -424,27 +426,25 @@ $extraJs = '
     btn.addEventListener("click", function () {
         btn.disabled = true;
         btn.innerHTML = \'<span class="spinner-border spinner-border-sm me-1"></span>Salvataggio…\';
-
         const fd = new FormData(form);
-        fetch(window.location.pathname + "?id=" + ' . $idFattura . ', {
-            method: "POST",
-            body: fd
+        fetch("dettaglio.php?id=' . $idFattura . '", { method: "POST", body: fd })
+        .then(r => {
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            return r.json();
         })
-        .then(r => r.json())
         .then(data => {
             btn.disabled = false;
             btn.innerHTML = \'<i class="bi bi-save me-1"></i>Salva classificazione\';
             if (data.ok) {
-                // Rimuove evidenziazione gialla dalle righe con checkbox spuntata
                 form.querySelectorAll("input[type=checkbox]:checked").forEach(cb => {
                     cb.closest("tr")?.classList.remove("table-warning");
                 });
-                const toast = document.createElement("div");
-                toast.className = "alert alert-success alert-dismissible fade show position-fixed top-0 end-0 m-3";
-                toast.style.zIndex = 9999;
-                toast.innerHTML = \'<i class="bi bi-check-circle me-2"></i>Salvato.<button type="button" class="btn-close" data-bs-dismiss="alert"></button>\';
-                document.body.appendChild(toast);
-                setTimeout(() => toast.remove(), 3000);
+                const t = document.createElement("div");
+                t.className = "alert alert-success alert-dismissible fade show position-fixed top-0 end-0 m-3";
+                t.style.zIndex = 9999;
+                t.innerHTML = \'<i class="bi bi-check-circle me-2"></i>Salvato.<button type="button" class="btn-close" data-bs-dismiss="alert"></button>\';
+                document.body.appendChild(t);
+                setTimeout(() => t.remove(), 3000);
             } else {
                 alert("Errore: " + (data.error || "sconosciuto"));
             }
@@ -452,7 +452,7 @@ $extraJs = '
         .catch(err => {
             btn.disabled = false;
             btn.innerHTML = \'<i class="bi bi-save me-1"></i>Salva classificazione\';
-            alert("Errore di rete: " + err.message);
+            alert("Errore salvataggio: " + err.message);
         });
     });
 })();
