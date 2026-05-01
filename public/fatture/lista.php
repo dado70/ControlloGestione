@@ -108,6 +108,8 @@ $totPagine = (int)ceil($totale / $perPage);
 if ($export && $idAzienda) {
     $righe = Database::fetchAll(
         "SELECT fe.data_documento, fe.numero_documento, cp.denominazione, fe.tipo_documento,
+                COALESCE((SELECT SUM(ri.imponibile) FROM fatture_riepilogo_iva ri WHERE ri.id_fattura=fe.id),0) AS tot_imponibile,
+                COALESCE((SELECT SUM(ri.imposta)    FROM fatture_riepilogo_iva ri WHERE ri.id_fattura=fe.id),0) AS tot_iva,
                 fe.importo_totale, fe.stato
          $baseSQL
          ORDER BY fe.data_documento DESC, fe.id DESC",
@@ -118,13 +120,15 @@ if ($export && $idAzienda) {
     header('Content-Disposition: attachment; filename="fatture_' . date('Ymd') . '.csv"');
     $out = fopen('php://output', 'w');
     fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF)); // BOM UTF-8 per Excel
-    fputcsv($out, ['Data', 'Numero', 'Fornitore', 'Tipo', 'Totale', 'Stato'], ';');
+    fputcsv($out, ['Data', 'Numero', 'Fornitore', 'Tipo', 'Imponibile', 'IVA', 'Totale', 'Stato'], ';');
     foreach ($righe as $r) {
         fputcsv($out, [
             $r['data_documento'],
             $r['numero_documento'],
             $r['denominazione'],
             $r['tipo_documento'],
+            number_format((float)$r['tot_imponibile'], 2, ',', '.'),
+            number_format((float)$r['tot_iva'],        2, ',', '.'),
             number_format((float)$r['importo_totale'], 2, ',', '.'),
             $r['stato'],
         ], ';');
@@ -137,7 +141,9 @@ if ($export && $idAzienda) {
 $fatture = $idAzienda ? Database::fetchAll(
     "SELECT fe.id, fe.data_documento, fe.numero_documento, fe.tipo_documento,
             fe.importo_totale, fe.stato, fe.nome_file,
-            cp.denominazione, cp.nome as cp_nome, cp.cognome as cp_cognome, cp.id_codice
+            cp.denominazione, cp.nome as cp_nome, cp.cognome as cp_cognome, cp.id_codice,
+            COALESCE((SELECT SUM(ri.imponibile) FROM fatture_riepilogo_iva ri WHERE ri.id_fattura=fe.id),0) AS tot_imponibile,
+            COALESCE((SELECT SUM(ri.imposta)    FROM fatture_riepilogo_iva ri WHERE ri.id_fattura=fe.id),0) AS tot_iva
      $baseSQL
      ORDER BY fe.data_documento DESC, fe.id DESC
      LIMIT $perPage OFFSET $offset",
@@ -240,6 +246,8 @@ $filtriQs = http_build_query(array_filter([
           <th>Numero</th>
           <th>Fornitore</th>
           <th>Tipo</th>
+          <th class="text-end">Imponibile (€)</th>
+          <th class="text-end">IVA (€)</th>
           <th class="text-end">Totale (€)</th>
           <th>Stato</th>
           <th class="text-center">Azioni</th>
@@ -247,7 +255,7 @@ $filtriQs = http_build_query(array_filter([
       </thead>
       <tbody>
       <?php if (empty($fatture)): ?>
-      <tr><td colspan="7" class="text-center text-muted py-4">Nessuna fattura trovata.</td></tr>
+      <tr><td colspan="9" class="text-center text-muted py-4">Nessuna fattura trovata.</td></tr>
       <?php else: ?>
       <?php foreach ($fatture as $f): ?>
       <tr>
@@ -258,6 +266,8 @@ $filtriQs = http_build_query(array_filter([
           <div class="small text-muted"><?= htmlspecialchars($f['id_codice']) ?></div>
         </td>
         <td><span class="badge bg-light text-dark border"><?= htmlspecialchars($f['tipo_documento']) ?></span></td>
+        <td class="text-end"><?= number_format((float)$f['tot_imponibile'], 2, ',', '.') ?></td>
+        <td class="text-end"><?= number_format((float)$f['tot_iva'],        2, ',', '.') ?></td>
         <td class="text-end fw-semibold"><?= number_format((float)$f['importo_totale'], 2, ',', '.') ?></td>
         <td>
           <span class="badge <?= $statiBadge[$f['stato']] ?? 'bg-secondary' ?>">

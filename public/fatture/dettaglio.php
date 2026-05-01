@@ -168,6 +168,33 @@ $statiBadge = [
 $nomeFornitore = !empty($fattura['denominazione'])
     ? $fattura['denominazione']
     : trim(($fattura['cp_cognome'] ?? '') . ' ' . ($fattura['cp_nome'] ?? ''));
+
+// Navigazione fatture: precedente/successiva in ordine cronologico (DESC → prev = più vecchia)
+$navPrev = Database::fetchOne(
+    'SELECT id FROM fatture_elettroniche
+     WHERE id_azienda=? AND (data_documento < ? OR (data_documento = ? AND id < ?))
+     ORDER BY data_documento DESC, id DESC LIMIT 1',
+    [$idAzienda, $fattura['data_documento'], $fattura['data_documento'], $idFattura]
+);
+$navNext = Database::fetchOne(
+    'SELECT id FROM fatture_elettroniche
+     WHERE id_azienda=? AND (data_documento > ? OR (data_documento = ? AND id > ?))
+     ORDER BY data_documento ASC, id ASC LIMIT 1',
+    [$idAzienda, $fattura['data_documento'], $fattura['data_documento'], $idFattura]
+);
+// Stesso fornitore
+$navFornPrev = Database::fetchOne(
+    'SELECT id FROM fatture_elettroniche
+     WHERE id_azienda=? AND id_cedente=? AND (data_documento < ? OR (data_documento = ? AND id < ?))
+     ORDER BY data_documento DESC, id DESC LIMIT 1',
+    [$idAzienda, $fattura['id_cedente'], $fattura['data_documento'], $fattura['data_documento'], $idFattura]
+);
+$navFornNext = Database::fetchOne(
+    'SELECT id FROM fatture_elettroniche
+     WHERE id_azienda=? AND id_cedente=? AND (data_documento > ? OR (data_documento = ? AND id > ?))
+     ORDER BY data_documento ASC, id ASC LIMIT 1',
+    [$idAzienda, $fattura['id_cedente'], $fattura['data_documento'], $fattura['data_documento'], $idFattura]
+);
 ?>
 
 <?php if (isset($_GET['saved'])): ?>
@@ -176,6 +203,39 @@ $nomeFornitore = !empty($fattura['denominazione'])
   <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 <?php endif; ?>
+
+<!-- Barra navigazione fatture -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <div class="btn-group btn-group-sm">
+    <a href="<?= $navPrev ? 'dettaglio.php?id=' . $navPrev['id'] : '#' ?>"
+       class="btn btn-outline-secondary<?= !$navPrev ? ' disabled' : '' ?>"
+       title="Fattura precedente (più vecchia)">
+      <i class="bi bi-chevron-left"></i> Precedente
+    </a>
+    <a href="lista.php" class="btn btn-outline-secondary" title="Torna all'elenco">
+      <i class="bi bi-list-task"></i>
+    </a>
+    <a href="<?= $navNext ? 'dettaglio.php?id=' . $navNext['id'] : '#' ?>"
+       class="btn btn-outline-secondary<?= !$navNext ? ' disabled' : '' ?>"
+       title="Fattura successiva (più recente)">
+      Successiva <i class="bi bi-chevron-right"></i>
+    </a>
+  </div>
+  <?php if ($navFornPrev || $navFornNext): ?>
+  <div class="btn-group btn-group-sm">
+    <a href="<?= $navFornPrev ? 'dettaglio.php?id=' . $navFornPrev['id'] : '#' ?>"
+       class="btn btn-outline-info<?= !$navFornPrev ? ' disabled' : '' ?>"
+       title="Fattura precedente dello stesso fornitore">
+      <i class="bi bi-chevron-left"></i> <?= htmlspecialchars(mb_substr($nomeFornitore, 0, 25)) ?>
+    </a>
+    <a href="<?= $navFornNext ? 'dettaglio.php?id=' . $navFornNext['id'] : '#' ?>"
+       class="btn btn-outline-info<?= !$navFornNext ? ' disabled' : '' ?>"
+       title="Fattura successiva dello stesso fornitore">
+      <i class="bi bi-chevron-right"></i>
+    </a>
+  </div>
+  <?php endif; ?>
+</div>
 
 <!-- Header fattura -->
 <div class="row g-3 mb-4">
