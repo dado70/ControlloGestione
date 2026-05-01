@@ -13,7 +13,7 @@
 -- -----------------------------------------------------------
 -- LIVELLO 1 - MASTRI
 -- -----------------------------------------------------------
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'04','IMMOBILIZZAZIONI IMMATERIALI',1,NULL,'ATTIVO'),
 (__ID__,'13','IMMOBILIZZAZIONI MATERIALI',1,NULL,'ATTIVO'),
 (__ID__,'16','FONDI AMMORTAMENTO',1,NULL,'PASSIVO'),
@@ -45,7 +45,7 @@ INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `co
 -- -----------------------------------------------------------
 -- LIVELLO 2 - CONTI (derivati da "Conto di riferimento" del PDF)
 -- -----------------------------------------------------------
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 -- 04 Immobilizzazioni immateriali
 (__ID__,'04.02.001','COSTI DI SVILUPPO',2,'04','ATTIVO'),
 -- 13 Immobilizzazioni materiali
@@ -208,12 +208,12 @@ INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `co
 -- -----------------------------------------------------------
 
 -- 04 - Immobilizzazioni immateriali
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'04.02.501','COSTI DI SVILUPPO SPECIFICI A',3,'04.02.001','ATTIVO'),
 (__ID__,'04.02.502','COSTI DI SVILUPPO SPECIFICI B',3,'04.02.001','ATTIVO');
 
 -- 13 - Immobilizzazioni materiali
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'13.01.501','TERRENO SPECIFICO "A"',3,'13.01.001','ATTIVO'),
 (__ID__,'13.01.502','TERRENO SPECIFICO "B"',3,'13.01.001','ATTIVO'),
 (__ID__,'13.01.503','TERRENO SPECIFICO "C"',3,'13.01.001','ATTIVO'),
@@ -236,7 +236,7 @@ INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `co
 (__ID__,'13.09.507','INSEGNE',3,'13.09.001','ATTIVO');
 
 -- 16 - Fondi ammortamento
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'16.01.501','F.DO AMM.TO FABBRICATI SPECIFICI "A"',3,'16.01.005','PASSIVO'),
 (__ID__,'16.01.502','F.DO AMM.TO FABBRICATI SPECIFICI "B"',3,'16.01.005','PASSIVO'),
 (__ID__,'16.01.503','F.DO AMM.TO FABBRICATI SPECIFICI "C"',3,'16.01.005','PASSIVO'),
@@ -248,12 +248,12 @@ INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `co
 (__ID__,'16.07.502','FONDO AMM.TO ALTRI BENI SPECIFICI "B"',3,'16.07.093','PASSIVO');
 
 -- 25 - Rimanenze
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'25.07.500','MERCI SPECIFICHE "A"',3,'25.07.005','ATTIVO'),
 (__ID__,'25.07.501','MERCI SPECIFICHE "B"',3,'25.07.005','ATTIVO');
 
 -- 28 - Crediti
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'28.01.002','CLIENTI C/ANTICIPAZIONI',3,'28.01.001','ATTIVO'),
 (__ID__,'28.01.003','CLIENTI ROBIN TUR',3,'28.01.001','ATTIVO'),
 (__ID__,'28.01.056','CARTE DI CREDITO "B"',3,'28.01.055','ATTIVO'),
@@ -283,7 +283,7 @@ INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `co
 (__ID__,'28.15.513','CREDITI PER RECUPERO 50% COMM. POS',3,'28.15.001','ATTIVO');
 
 -- 34 - Banche e cassa
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'34.01.500','BANCA MPS',3,'34.01.001','ATTIVO'),
 (__ID__,'34.01.501','BANCA UNICREDIT',3,'34.01.001','ATTIVO'),
 (__ID__,'34.01.502','BANCA CREDEM',3,'34.01.001','ATTIVO'),
@@ -300,27 +300,27 @@ INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `co
 (__ID__,'34.05.506','CARTA PREPAGATA C',3,'34.05.001','ATTIVO');
 
 -- 37 - Risconti attivi
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'37.01.501','RISCONTI ATTIVI LEASING',3,'37.01.005','ATTIVO');
 
 -- 40 - Patrimonio netto
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'40.05.500','RIS. RIV. TERRENO N.185/08',3,'40.05.029','PASSIVO'),
 (__ID__,'40.05.501','RISERVA RIVALUTAZ. RIALLINEATA',3,'40.05.029','PASSIVO'),
 (__ID__,'40.15.501','PERDITE RIPORTABILI SPECIFICHE A',3,'40.15.005','PASSIVO');
 
 -- 43 - Fondi rischi
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'43.03.500','ALTRE FORME FONDO PREVID. COPL',3,'43.03.001','PASSIVO');
 
 -- 46 - TFR
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'46.01.501','FONDO TRATTAMENTO DI FINE RAPPORTO',3,'46.01.001','PASSIVO'),
 (__ID__,'46.01.502','FONDO TFR',3,'46.01.001','PASSIVO'),
 (__ID__,'46.01.503','FONDO TFR COMPLEMENTARE',3,'46.01.001','PASSIVO');
 
 -- 49 - Debiti (finanziamenti)
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'49.07.500','BANCA C/FINANZIAMENTO OLTRE ES.SUC.',3,'49.07.035','PASSIVO'),
 (__ID__,'49.07.501','CARTA PREPAGATA 7587',3,'49.07.047','PASSIVO'),
 (__ID__,'49.07.502','MUTUO BCCE 000/003110',3,'49.07.037','PASSIVO'),
@@ -355,7 +355,7 @@ INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `co
 (__ID__,'49.07.531','BANCA C/FINANZIAMENTI "Z"',3,'49.07.037','PASSIVO');
 
 -- 49 - Debiti (caparre, fornitori, fisco, previdenza, dipendenti)
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'49.11.501','CAPARRE RIMBORSATE/DA RIMBORSARE',3,'49.11.013','PASSIVO'),
 (__ID__,'49.11.502','CAPARRE PER ANNO SUCCESSIVO',3,'49.11.005','PASSIVO'),
 (__ID__,'49.11.503','CAPARRE ANNO PRECEDENTE',3,'49.11.005','PASSIVO'),
@@ -461,12 +461,12 @@ INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `co
 (__ID__,'49.27.550','DEBITI V/DIPENDENTI AM',3,'49.27.025','PASSIVO');
 
 -- 52 - Ratei e risconti passivi
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'52.01.501','RATEI PASS. CONTRIB. FERIE + 14MA',3,'52.01.001','PASSIVO'),
 (__ID__,'52.01.502','RATEI PASS. FERIE/PERMESSI/14MA',3,'52.01.005','PASSIVO');
 
 -- 60 - Ricavi
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'60.01.500','QUOTE ASSOCIATIVE',3,'60.01.085','RICAVO'),
 (__ID__,'60.01.501','SPONSORIZZAZIONI',3,'60.01.085','RICAVO'),
 (__ID__,'60.01.502','TRASPORTI FERRY',3,'60.01.085','RICAVO'),
@@ -499,7 +499,7 @@ INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `co
 (__ID__,'60.01.550','SCONTI SU VENDITE B',3,'60.01.166','RICAVO');
 
 -- 71 - Altri ricavi
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'71.01.501','ALTRI RICAVI "A"',3,'71.01.009','RICAVO'),
 (__ID__,'71.01.502','RIADDEBITO DIPENDENTI',3,'71.01.069','RICAVO'),
 (__ID__,'71.01.503','ALTRI CONTRIBUTI SPECIFICI NON TASSATI',3,'71.01.185','RICAVO'),
@@ -508,7 +508,7 @@ INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `co
 (__ID__,'71.01.506','ALTRI RICAVI B',3,'71.01.001','RICAVO');
 
 -- 73 - Acquisti
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'73.01.500','ACQUISTI VARI',3,'73.01.013','COSTO'),
 (__ID__,'73.01.501','ACQ. MERCE SPECIFICA "B"',3,'73.01.013','COSTO'),
 (__ID__,'73.01.502','ACQ. MERCE SPECIFICA "C"',3,'73.01.013','COSTO'),
@@ -538,7 +538,7 @@ INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `co
 (__ID__,'73.09.504','ACQUISTI SPECIFICI D',3,'75.01.025','COSTO');
 
 -- 75 - Servizi
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'75.01.005','TRASPORTO',3,'75.01.001','COSTO'),
 (__ID__,'75.01.501','SERVIZI IND. SPEC. "A"',3,'75.01.001','COSTO'),
 (__ID__,'75.01.502','SERVIZI SPECIFICI A',3,'75.01.025','COSTO'),
@@ -582,7 +582,7 @@ INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `co
 (__ID__,'75.17.508','SERVIZI SPECIFICI H',3,'75.01.001','COSTO');
 
 -- 77 - Godimento beni di terzi
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'77.01.500','CONCESSIONI DEMANIALI',3,'77.01.049','COSTO'),
 (__ID__,'77.01.501','CANONI LOCAZIONE BENI MOBILI',3,'77.01.049','COSTO'),
 (__ID__,'77.03.501','MAXICANONE LEASING INDEDUCIBILE',3,'77.03.221','COSTO'),
@@ -594,7 +594,7 @@ INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `co
 (__ID__,'77.09.505','CANONE AFFITTO 5',3,'77.09.001','COSTO');
 
 -- 79 - Personale
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'79.01.501','RIT. IRPEF SU STIPENDIO (PROF)',3,'79.01.001','COSTO'),
 (__ID__,'79.01.502','STIPENDIO PERSONALE NON SOCIO',3,'79.01.005','COSTO'),
 (__ID__,'79.01.503','STIPENDIO PERSONALE SOCIO',3,'79.01.005','COSTO'),
@@ -608,16 +608,16 @@ INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `co
 (__ID__,'79.09.009','TRASFERTE DIPENDENTI',3,'79.01.013','COSTO');
 
 -- 83 - Ammortamenti
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'83.09.500','AMM.TO ATTREZZATURE BALNEARI',3,'83.09.113','COSTO');
 
 -- 89 - Variazioni rimanenze
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'89.01.500','RIMANENZE INIZIALI MERCI SPECIFICHE "A"',3,'89.01.013','COSTO'),
 (__ID__,'89.02.500','RIMANENZE FINALI MERCI SPECIFICHE "A"',3,'89.02.013','RICAVO');
 
 -- 91 - Accantonamenti
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'91.01.501','ACC.TO FONDO SPESE FUTURE SPECIFICHE A',3,'91.01.037','COSTO'),
 (__ID__,'91.01.502','ACC.TO FONDO SPESE FUTURE SPECIFICHE B',3,'91.01.037','COSTO'),
 (__ID__,'91.01.503','ACC.TO FONDO SPESE FUTURE SPECIFICHE C',3,'91.01.037','COSTO'),
@@ -631,7 +631,7 @@ INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `co
 (__ID__,'91.01.511','ACC.TO FONDO SPESE FUTURE SPECIFICHE M',3,'91.01.037','COSTO');
 
 -- 92 - Oneri diversi
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'92.01.500','SANZIONI RAVVEDIMENTO OPEROSO',3,'92.01.113','COSTO'),
 (__ID__,'92.01.501','ARROTONDAMENTI PASSIVI',3,'92.01.141','COSTO'),
 (__ID__,'92.01.502','QUOTE ASSOCIATIVE',3,'92.01.109','COSTO'),
@@ -643,7 +643,7 @@ INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `co
 (__ID__,'92.01.509','ONERI SPECIFICI B',3,'92.01.105','COSTO');
 
 -- 93 - Finanziari
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'93.13.501','ALTRI PROVENTI FINANZIARI SPECIFICI',3,'93.13.001','RICAVO'),
 (__ID__,'93.15.501','INTERESSI PASS. RAVV. OPEROSO',3,'93.15.046','COSTO'),
 (__ID__,'93.15.502','INT. PASSIVI SU DEP. CAUZIONALE',3,'93.15.053','COSTO'),
@@ -653,13 +653,13 @@ INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `co
 (__ID__,'93.15.506','INTERESSI PASSIVI SPECIFICI A',3,'93.15.001','COSTO');
 
 -- 96 - Imposte
-INSERT INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
+INSERT IGNORE INTO `piano_conti` (`id_azienda`, `codice`, `descrizione`, `livello`, `codice_padre`, `tipo`) VALUES
 (__ID__,'96.01.501','IMPOSTE DI ESERCIZIO',3,'96.01.001','COSTO');
 
 -- =============================================================
 -- CENTRI DI COSTO - Villa Ottone (id_azienda = 1)
 -- =============================================================
-INSERT INTO `centri_costo` (`id_azienda`, `codice`, `descrizione`, `tipo`, `ordine`) VALUES
+INSERT IGNORE INTO `centri_costo` (`id_azienda`, `codice`, `descrizione`, `tipo`, `ordine`) VALUES
 (__ID__,'CC01','Cucina / Ristorante','COSTO',1),
 (__ID__,'CC02','Bar','COSTO',2),
 (__ID__,'CC03','Housekeeping / Lavanderia','COSTO',3),
@@ -679,7 +679,7 @@ INSERT INTO `centri_costo` (`id_azienda`, `codice`, `descrizione`, `tipo`, `ordi
 -- I riferimenti a id_conto vengono inseriti dopo che piano_conti è popolato.
 -- Si usano subquery per recuperare l'id del conto dal codice.
 
-INSERT INTO `keyword_conto` (`id_azienda`, `id_conto`, `keyword`, `peso`)
+INSERT IGNORE INTO `keyword_conto` (`id_azienda`, `id_conto`, `keyword`, `peso`)
 SELECT __ID__, id, 'energia elettrica', 3 FROM piano_conti WHERE id_azienda=__ID__ AND codice='75.01.025'
 UNION ALL SELECT __ID__, id, 'enel', 3 FROM piano_conti WHERE id_azienda=__ID__ AND codice='75.01.025'
 UNION ALL SELECT __ID__, id, 'elettricita', 2 FROM piano_conti WHERE id_azienda=__ID__ AND codice='75.01.025'

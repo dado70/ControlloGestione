@@ -3,6 +3,7 @@
 declare(strict_types=1);
 $pageTitle  = 'Piano dei conti';
 $activePage = 'piano_conti';
+require_once dirname(__DIR__, 2) . '/core/PDCImporter.php';
 require_once dirname(__DIR__) . '/layout/header.php';
 
 Auth::requireRole('superadmin', 'admin');
@@ -26,6 +27,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $action = $_POST['action'] ?? '';
+
+    if ($action === 'importa_template') {
+        $esistenti = (int)(Database::fetchOne(
+            'SELECT COUNT(*) as n FROM piano_conti WHERE id_azienda=?', [$idAzienda]
+        )['n'] ?? 0);
+        if ($esistenti > 0 && empty($_POST['forza'])) {
+            $errore = 'Il piano dei conti contiene già ' . $esistenti . ' voci. '
+                    . 'Usa il pulsante "Forza reimport" per sovrascrivere.';
+        } else {
+            try {
+                PDCImporter::importa(Database::getInstance(), $idAzienda);
+                $successo = 'Piano dei conti predefinito importato correttamente.';
+            } catch (\Exception $e) {
+                $errore = 'Errore durante l\'importazione: ' . $e->getMessage();
+            }
+        }
+    }
 
     if ($action === 'salva') {
         $id          = isset($_POST['id']) && $_POST['id'] !== '' ? (int)$_POST['id'] : null;
@@ -147,7 +165,10 @@ $tipiBadge = [
         <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-search"></i></button>
         <a href="piano_conti.php" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x"></i></a>
       </div>
-      <div class="col-auto ms-auto">
+      <div class="col-auto ms-auto d-flex gap-1">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalImportaPDC">
+          <i class="bi bi-cloud-download me-1"></i>Carica PDC predefinito
+        </button>
         <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#modalConto">
           <i class="bi bi-plus-circle me-1"></i>Aggiungi conto
         </button>
@@ -263,6 +284,51 @@ $tipiBadge = [
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
           <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Salva</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal importa PDC predefinito -->
+<div class="modal fade" id="modalImportaPDC" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
+        <input type="hidden" name="action" value="importa_template">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-cloud-download me-2"></i>Carica PDC predefinito</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p>Verranno importati circa <strong>400 conti</strong> del piano dei conti Villa Ottone
+          (mastri, conti e sottoconti) più <strong>9 centri di costo</strong> predefiniti.</p>
+          <?php
+          $nEsistenti = (int)(Database::fetchOne(
+              'SELECT COUNT(*) as n FROM piano_conti WHERE id_azienda=?', [$idAzienda]
+          )['n'] ?? 0);
+          ?>
+          <?php if ($nEsistenti > 0): ?>
+          <div class="alert alert-warning mb-2">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            Esistono già <strong><?= $nEsistenti ?></strong> conti per questa azienda.
+            L'import userà <code>INSERT IGNORE</code>: i conti esistenti non verranno modificati,
+            verranno aggiunti solo quelli mancanti.
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="forza" id="forzaImport" value="1">
+            <label class="form-check-label" for="forzaImport">
+              Procedi comunque (aggiungi solo i conti mancanti)
+            </label>
+          </div>
+          <?php endif; ?>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annulla</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-cloud-download me-1"></i>Importa
+          </button>
         </div>
       </form>
     </div>
