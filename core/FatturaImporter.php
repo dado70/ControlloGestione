@@ -167,7 +167,7 @@ class FatturaImporter
 
                     // 7. Insert linee
                     foreach ($body['linee'] as $linea) {
-                        $idConto = $this->suggestor->suggest($linea['descrizione'] ?? '', $idAzienda);
+                        $idConto = $this->suggestor->suggest($linea['descrizione'] ?? '', $idAzienda, $idCedente);
 
                         // Suggerisci anche centro di costo dal mapping predefinito
                         $idCentro = null;
