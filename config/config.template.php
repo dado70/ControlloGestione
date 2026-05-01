@@ -12,7 +12,12 @@ define('DB_CHARSET', 'utf8mb4');
 // Applicazione
 define('APP_NAME',    'ControlloGestione');
 define('APP_VERSION', '1.0.0');
-define('APP_URL',     '{{APP_URL}}');   // es. http://localhost/gesthotel
+// APP_URL auto-rilevato: funziona su qualsiasi server/IP senza modifiche
+$_proto   = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$_host    = $_SERVER['HTTP_HOST'] ?? 'localhost';
+$_subpath = '/gesthotel';   // modifica se la cartella sul server si chiama diversamente
+define('APP_URL', $_proto . '://' . $_host . $_subpath);
+unset($_proto, $_host, $_subpath);
 define('APP_ENV',     'development');   // development | production
 
 // Sessioni
