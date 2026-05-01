@@ -111,7 +111,7 @@ foreach ($datiCorr as $codice => $info) {
   <i class="bi bi-exclamation-triangle me-2"></i>
   <strong><?= $contiNonMappati ?></strong> cont<?= $contiNonMappati === 1 ? 'o' : 'i' ?> utilizzat<?= $contiNonMappati === 1 ? 'o' : 'i' ?>
   nelle fatture non ha<?= $contiNonMappati === 1 ? '' : 'nno' ?> ancora una mappatura CEE.
-  <a href="../impostazioni/mappatura_cee.php?solo_non_mappati=1" class="alert-link">
+  <a href="../impostazioni/mappatura_cee.php?non_mappati=1" class="alert-link">
     Vai alle impostazioni &rarr;
   </a>
 </div>

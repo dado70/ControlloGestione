@@ -8,9 +8,6 @@ require_once dirname(__DIR__, 2) . '/core/Auth.php';
 Auth::init();
 Auth::requireRole('admin');
 
-if (empty($_SESSION['csrf'])) {
-    $_SESSION['csrf'] = bin2hex(random_bytes(32));
-}
 
 $me      = Auth::getUser();
 $isSuper = Auth::isSuperadmin();
@@ -18,7 +15,7 @@ $msg     = '';
 $msgType = 'success';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if ($_POST['csrf'] !== $_SESSION['csrf']) die('CSRF error');
+    if (!hash_equals(Auth::csrfToken(), $_POST['csrf'] ?? '')) { http_response_code(419); die('CSRF token non valido.'); }
     $action = $_POST['action'] ?? '';
 
     if ($action === 'add') {
@@ -92,12 +89,13 @@ if ($isSuper) {
 } else {
     $idAzienda = Auth::getIdAzienda();
     $utenti = Database::fetchAll(
-        'SELECT u.*, ? AS aziende_str
+        'SELECT u.*, a.ragione_sociale AS aziende_str
          FROM utenti u
          JOIN utenti_aziende ua ON ua.id_utente=u.id
+         JOIN aziende a ON a.id=ua.id_azienda
          WHERE ua.id_azienda=?
          ORDER BY u.username',
-        [$idAzienda, $idAzienda]
+        [$idAzienda]
     );
     $aziende = Database::fetchAll('SELECT id, ragione_sociale FROM aziende WHERE id=?', [$idAzienda]);
 }
@@ -151,7 +149,7 @@ require_once dirname(__DIR__) . '/layout/header.php';
             <td><?= htmlspecialchars($u['email'] ?? '') ?></td>
             <td>
               <form method="post" class="d-flex gap-1 align-items-center">
-                <input type="hidden" name="csrf" value="<?= $_SESSION['csrf'] ?>">
+                <input type="hidden" name="csrf" value="<?= Auth::csrfToken() ?>">
                 <input type="hidden" name="action" value="edit_ruolo">
                 <input type="hidden" name="id" value="<?= $u['id'] ?>">
                 <?php if (!empty($aziende)): ?>
@@ -176,7 +174,7 @@ require_once dirname(__DIR__) . '/layout/header.php';
             <td class="text-end">
               <?php if ((int)$u['id'] !== (int)$me['id']): ?>
               <form method="post" class="d-inline">
-                <input type="hidden" name="csrf" value="<?= $_SESSION['csrf'] ?>">
+                <input type="hidden" name="csrf" value="<?= Auth::csrfToken() ?>">
                 <input type="hidden" name="action" value="toggle">
                 <input type="hidden" name="id" value="<?= $u['id'] ?>">
                 <button type="submit" class="btn btn-sm btn-outline-<?= $u['attivo'] ? 'warning' : 'success' ?>"
@@ -186,7 +184,7 @@ require_once dirname(__DIR__) . '/layout/header.php';
               </form>
               <form method="post" class="d-inline"
                 onsubmit="return confirm('Reimpostare la password di <?= htmlspecialchars($u['username']) ?>?')">
-                <input type="hidden" name="csrf" value="<?= $_SESSION['csrf'] ?>">
+                <input type="hidden" name="csrf" value="<?= Auth::csrfToken() ?>">
                 <input type="hidden" name="action" value="reset_pwd">
                 <input type="hidden" name="id" value="<?= $u['id'] ?>">
                 <button type="submit" class="btn btn-sm btn-outline-secondary" title="Reset password">
@@ -208,7 +206,7 @@ require_once dirname(__DIR__) . '/layout/header.php';
   <div class="modal-dialog">
     <div class="modal-content">
       <form method="post" autocomplete="off">
-        <input type="hidden" name="csrf" value="<?= $_SESSION['csrf'] ?>">
+        <input type="hidden" name="csrf" value="<?= Auth::csrfToken() ?>">
         <input type="hidden" name="action" value="add">
         <div class="modal-header">
           <h5 class="modal-title">Nuovo utente</h5>

@@ -177,6 +177,10 @@ if ($idAzienda) {
   </div>
 </div>
 
+<?php
+$chartLabelsCC = [];
+$chartDataCC   = [];
+?>
 <?php if ($totMese > 0): ?>
 <div class="card shadow-sm border-0 mt-3">
   <div class="card-header bg-white fw-semibold border-bottom-0">
@@ -188,8 +192,6 @@ if ($idAzienda) {
 </div>
 
 <?php
-$chartLabelsCC = [];
-$chartDataCC   = [];
 foreach ($datiCC as $cc) {
     if ($cc['costi_mese'] > 0) {
         $chartLabelsCC[] = $cc['codice'] . ' ' . $cc['descrizione'];

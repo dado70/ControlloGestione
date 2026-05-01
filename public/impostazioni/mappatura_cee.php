@@ -8,32 +8,33 @@ require_once dirname(__DIR__, 2) . '/core/Auth.php';
 Auth::init();
 Auth::requireRole('admin');
 
-if (empty($_SESSION['csrf'])) {
-    $_SESSION['csrf'] = bin2hex(random_bytes(32));
-}
 
 $idAzienda = Auth::getIdAzienda();
 $msg = '';
 
 // Salva mappatura
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['salva_mappatura'])) {
-    if ($_POST['csrf'] !== $_SESSION['csrf']) die('CSRF error');
+    if (!hash_equals(Auth::csrfToken(), $_POST['csrf'] ?? '')) { http_response_code(419); die('CSRF token non valido.'); }
     $idConto   = (int)($_POST['id_conto'] ?? 0);
     $codiceCee = trim($_POST['codice_cee'] ?? '');
     if ($idConto && $codiceCee) {
+        Database::beginTransaction();
         Database::execute(
-            'INSERT INTO mappatura_pdc_cee (id_azienda, id_conto, codice_cee)
-             VALUES (?, ?, ?)
-             ON DUPLICATE KEY UPDATE codice_cee=VALUES(codice_cee)',
+            'DELETE FROM mappatura_pdc_cee WHERE id_azienda=? AND id_conto=?',
+            [$idAzienda, $idConto]
+        );
+        Database::execute(
+            'INSERT INTO mappatura_pdc_cee (id_azienda, id_conto, codice_cee) VALUES (?,?,?)',
             [$idAzienda, $idConto, $codiceCee]
         );
+        Database::commit();
         $msg = 'Mappatura salvata.';
     }
 }
 
 // Elimina mappatura
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['elimina_mappatura'])) {
-    if ($_POST['csrf'] !== $_SESSION['csrf']) die('CSRF error');
+    if (!hash_equals(Auth::csrfToken(), $_POST['csrf'] ?? '')) { http_response_code(419); die('CSRF token non valido.'); }
     Database::execute(
         'DELETE FROM mappatura_pdc_cee WHERE id_azienda=? AND id_conto=?',
         [$idAzienda, (int)$_POST['id_conto']]
@@ -121,7 +122,7 @@ if ($nonMappati > 0 && !$soloNonMappati):
                 <code><?= htmlspecialchars($r['codice_cee']) ?></code>
               <?php else: ?>
                 <form method="post" class="d-flex gap-1">
-                  <input type="hidden" name="csrf" value="<?= $_SESSION['csrf'] ?>">
+                  <input type="hidden" name="csrf" value="<?= Auth::csrfToken() ?>">
                   <input type="hidden" name="id_conto" value="<?= $r['id'] ?>">
                   <select name="codice_cee" class="form-select form-select-sm" required style="min-width:180px">
                     <option value="">-- seleziona --</option>
@@ -149,7 +150,7 @@ if ($nonMappati > 0 && !$soloNonMappati):
             <td>
               <?php if ($r['codice_cee']): ?>
               <form method="post" onsubmit="return confirm('Rimuovere la mappatura?')">
-                <input type="hidden" name="csrf" value="<?= $_SESSION['csrf'] ?>">
+                <input type="hidden" name="csrf" value="<?= Auth::csrfToken() ?>">
                 <input type="hidden" name="id_conto" value="<?= $r['id'] ?>">
                 <button type="submit" name="elimina_mappatura" class="btn btn-sm btn-outline-danger">
                   <i class="bi bi-trash"></i>

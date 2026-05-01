@@ -9,16 +9,13 @@ require_once dirname(__DIR__, 2) . '/core/PDCImporter.php';
 Auth::init();
 Auth::requireRole('superadmin');
 
-if (empty($_SESSION['csrf'])) {
-    $_SESSION['csrf'] = bin2hex(random_bytes(32));
-}
 
 $msg      = '';
 $msgType  = 'success';
 $errors   = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if ($_POST['csrf'] !== $_SESSION['csrf']) die('CSRF error');
+    if (!hash_equals(Auth::csrfToken(), $_POST['csrf'] ?? '')) { http_response_code(419); die('CSRF token non valido.'); }
 
     $action          = $_POST['action'] ?? '';
     $ragioneSociale  = trim($_POST['ragione_sociale'] ?? '');
@@ -71,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$aziende = Database::fetchAll('SELECT * FROM aziende ORDER BY ragione_sociale');
+$listaAziende = Database::fetchAll('SELECT * FROM aziende ORDER BY ragione_sociale');
 
 require_once dirname(__DIR__) . '/layout/header.php';
 ?>
@@ -105,7 +102,7 @@ require_once dirname(__DIR__) . '/layout/header.php';
           </tr>
         </thead>
         <tbody>
-          <?php foreach ($aziende as $az): ?>
+          <?php foreach ($listaAziende as $az): ?>
           <tr>
             <td><?= htmlspecialchars($az['ragione_sociale']) ?></td>
             <td><code><?= htmlspecialchars($az['partita_iva'] ?? '') ?></code></td>
@@ -124,7 +121,7 @@ require_once dirname(__DIR__) . '/layout/header.php';
                 data-action="edit"
                 data-id="<?= $az['id'] ?>"
                 data-ragione="<?= htmlspecialchars($az['ragione_sociale']) ?>"
-                data-piva="<?= htmlspecialchars($az['partita_iva']) ?>"
+                data-piva="<?= htmlspecialchars($az['partita_iva'] ?? '') ?>"
                 data-cf="<?= htmlspecialchars($az['codice_fiscale'] ?? '') ?>"
                 data-indirizzo="<?= htmlspecialchars($az['indirizzo'] ?? '') ?>"
                 data-cap="<?= htmlspecialchars($az['cap'] ?? '') ?>"
@@ -135,11 +132,11 @@ require_once dirname(__DIR__) . '/layout/header.php';
                 <i class="bi bi-pencil"></i>
               </button>
               <form method="post" class="d-inline">
-                <input type="hidden" name="csrf" value="<?= $_SESSION['csrf'] ?>">
+                <input type="hidden" name="csrf" value="<?= Auth::csrfToken() ?>">
                 <input type="hidden" name="action" value="toggle">
                 <input type="hidden" name="id" value="<?= $az['id'] ?>">
-                <button type="submit" class="btn btn-sm btn-outline-<?= $az['attiva'] ? 'warning' : 'success' ?>">
-                  <i class="bi bi-<?= $az['attiva'] ? 'pause' : 'play' ?>"></i>
+                <button type="submit" class="btn btn-sm btn-outline-<?= ($az['attiva'] ?? false) ? 'warning' : 'success' ?>">
+                  <i class="bi bi-<?= ($az['attiva'] ?? false) ? 'pause' : 'play' ?>"></i>
                 </button>
               </form>
             </td>
@@ -156,7 +153,7 @@ require_once dirname(__DIR__) . '/layout/header.php';
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <form method="post">
-        <input type="hidden" name="csrf" value="<?= $_SESSION['csrf'] ?>">
+        <input type="hidden" name="csrf" value="<?= Auth::csrfToken() ?>">
         <input type="hidden" name="action" id="modalAction" value="add">
         <input type="hidden" name="id" id="modalId" value="">
         <div class="modal-header">

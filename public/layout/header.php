@@ -14,6 +14,7 @@ $idAzienda = Auth::getIdAzienda();
 
 // Cambia azienda
 if (isset($_POST['switch_azienda']) && Auth::isAdmin()) {
+    Auth::verifyCsrf();
     Auth::setAzienda((int)$_POST['switch_azienda']);
     $idAzienda = Auth::getIdAzienda();
 }
@@ -117,6 +118,7 @@ function navLink(string $href, string $icon, string $label, string $active, stri
       <!-- Selettore azienda -->
       <?php if (count($aziende) > 1): ?>
       <form method="post" class="d-inline">
+        <input type="hidden" name="csrf_token" value="<?= Auth::csrfToken() ?>">
         <select name="switch_azienda" class="form-select form-select-sm azienda-selector"
                 onchange="this.form.submit()" title="Seleziona azienda">
           <?php foreach ($aziende as $az): ?>
