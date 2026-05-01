@@ -4,6 +4,7 @@ declare(strict_types=1);
 $pageTitle  = 'Piano dei conti';
 $activePage = 'piano_conti';
 require_once dirname(__DIR__, 2) . '/core/PDCImporter.php';
+require_once dirname(__DIR__, 2) . '/core/ContoSuggestor.php';
 require_once dirname(__DIR__) . '/layout/header.php';
 
 Auth::requireRole('superadmin', 'admin');
@@ -88,6 +89,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
         $successo = 'Stato aggiornato.';
     }
+
+    if ($action === 'risuggerisci') {
+        $suggestor = new ContoSuggestor();
+        $righe = Database::fetchAll(
+            'SELECT id, descrizione FROM fatture_linee
+             WHERE id_azienda=? AND classificazione_confermata=0',
+            [$idAzienda]
+        );
+        $aggiornate = 0;
+        foreach ($righe as $riga) {
+            $idConto = $suggestor->suggest($riga['descrizione'], $idAzienda);
+            $idCentro = null;
+            if ($idConto) {
+                $m = Database::fetchOne(
+                    'SELECT id_centro_costo FROM mappatura_conto_cc
+                     WHERE id_azienda=? AND id_conto=? ORDER BY percentuale DESC LIMIT 1',
+                    [$idAzienda, $idConto]
+                );
+                $idCentro = $m ? (int)$m['id_centro_costo'] : null;
+            }
+            if ($idConto !== null) {
+                Database::execute(
+                    'UPDATE fatture_linee SET id_conto=?, id_centro_costo=? WHERE id=?',
+                    [$idConto, $idCentro, $riga['id']]
+                );
+                $aggiornate++;
+            }
+        }
+        $successo = 'Ri-suggerimento completato: ' . $aggiornate . ' righe aggiornate su ' . count($righe) . ' non confermate.';
+    }
 }
 
 // Filtri
@@ -169,6 +200,14 @@ $tipiBadge = [
         <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalImportaPDC">
           <i class="bi bi-cloud-download me-1"></i>Carica PDC predefinito
         </button>
+        <form method="post" class="d-inline"
+              onsubmit="return confirm('Ri-suggerire conti e centri di costo su tutte le righe non confermate?')">
+          <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
+          <input type="hidden" name="action" value="risuggerisci">
+          <button type="submit" class="btn btn-sm btn-outline-warning">
+            <i class="bi bi-magic me-1"></i>Ri-suggerisci conti
+          </button>
+        </form>
         <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#modalConto">
           <i class="bi bi-plus-circle me-1"></i>Aggiungi conto
         </button>

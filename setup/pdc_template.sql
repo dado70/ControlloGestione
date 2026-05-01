@@ -734,3 +734,39 @@ UNION ALL SELECT __ID__, id, 'inail', 3 FROM piano_conti WHERE id_azienda=__ID__
 UNION ALL SELECT __ID__, id, 'demanio', 3 FROM piano_conti WHERE id_azienda=__ID__ AND codice='77.01.500'
 UNION ALL SELECT __ID__, id, 'concessione', 2 FROM piano_conti WHERE id_azienda=__ID__ AND codice='77.01.500';
 
+INSERT IGNORE INTO `mappatura_conto_cc` (`id_azienda`, `id_conto`, `id_centro_costo`, `percentuale`)
+SELECT __ID__, pc.id, cc.id, 100.00
+FROM piano_conti pc JOIN centri_costo cc ON cc.id_azienda=__ID__
+WHERE pc.id_azienda=__ID__ AND cc.codice='CC01'
+  AND pc.codice IN ('73.01.013','73.01.017','73.01.021','73.01.025','73.01.029','73.01.033','73.01.037','73.01.041','73.01.045','73.01.049','73.01.053','73.01.057','73.01.061','73.01.065','73.01.069','73.01.073','73.01.077','73.01.081','73.01.085','73.01.089','73.01.093','73.01.097')
+UNION ALL
+SELECT __ID__, pc.id, cc.id, 100.00
+FROM piano_conti pc JOIN centri_costo cc ON cc.id_azienda=__ID__
+WHERE pc.id_azienda=__ID__ AND cc.codice='CC07'
+  AND pc.codice IN ('75.01.025','75.01.029','75.01.033','75.01.037','75.01.041')
+UNION ALL
+SELECT __ID__, pc.id, cc.id, 100.00
+FROM piano_conti pc JOIN centri_costo cc ON cc.id_azienda=__ID__
+WHERE pc.id_azienda=__ID__ AND cc.codice='CC04'
+  AND pc.codice IN ('75.05.181','75.05.185','75.05.189','75.05.193','75.05.197','75.05.201')
+UNION ALL
+SELECT __ID__, pc.id, cc.id, 100.00
+FROM piano_conti pc JOIN centri_costo cc ON cc.id_azienda=__ID__
+WHERE pc.id_azienda=__ID__ AND cc.codice='CC03'
+  AND pc.codice IN ('77.05.157','75.17.013','73.05.001','73.05.005','73.05.009')
+UNION ALL
+SELECT __ID__, pc.id, cc.id, 100.00
+FROM piano_conti pc JOIN centri_costo cc ON cc.id_azienda=__ID__
+WHERE pc.id_azienda=__ID__ AND cc.codice='CC08'
+  AND pc.codice IN ('75.13.037','75.13.041','75.13.045','75.13.049','75.13.501')
+UNION ALL
+SELECT __ID__, pc.id, cc.id, 100.00
+FROM piano_conti pc JOIN centri_costo cc ON cc.id_azienda=__ID__
+WHERE pc.id_azienda=__ID__ AND cc.codice='CC06'
+  AND pc.codice IN ('75.11.001','75.11.005','75.11.009','75.11.013','75.11.113','75.15.001','75.17.500','77.07.013','73.09.045','92.01.005')
+UNION ALL
+SELECT __ID__, pc.id, cc.id, 100.00
+FROM piano_conti pc JOIN centri_costo cc ON cc.id_azienda=__ID__
+WHERE pc.id_azienda=__ID__ AND cc.codice='CC06'
+  AND pc.codice IN ('79.01.001','79.01.005','79.01.009','79.01.013','79.03.001','79.03.005','79.05.001','79.07.001','79.09.001');
+
