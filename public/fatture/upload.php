@@ -1,21 +1,24 @@
 <?php
 
 declare(strict_types=1);
-$pageTitle  = 'Importa fatture';
-$activePage = 'upload';
-require_once dirname(__DIR__) . '/layout/header.php';
+
+// Carica dipendenze senza output (la POST AJAX deve rispondere prima dell'HTML)
+require_once dirname(__DIR__, 2) . '/config/config.php';
+require_once dirname(__DIR__, 2) . '/core/Database.php';
+require_once dirname(__DIR__, 2) . '/core/Auth.php';
 require_once dirname(__DIR__, 2) . '/core/P7MDecryptor.php';
 require_once dirname(__DIR__, 2) . '/core/FatturaParser.php';
 require_once dirname(__DIR__, 2) . '/core/ContoSuggestor.php';
 require_once dirname(__DIR__, 2) . '/core/FatturaImporter.php';
 
+Auth::init();
 Auth::requireRole('superadmin', 'admin', 'operatore');
 
 $idAzienda = Auth::getIdAzienda();
 $user      = Auth::getUser();
 
-// Gestione upload AJAX
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'upload') {
+// ── Gestione upload AJAX (prima di qualsiasi output HTML) ────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'upload') {
     header('Content-Type: application/json; charset=utf-8');
 
     // Verifica CSRF
@@ -87,6 +90,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
     exit;
 }
+// ── Fine POST AJAX ───────────────────────────────────────────────────────────
+
+$pageTitle  = 'Importa fatture';
+$activePage = 'upload';
+require_once dirname(__DIR__) . '/layout/header.php';
 
 $csrfToken = Auth::csrfToken();
 ?>

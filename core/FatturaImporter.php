@@ -39,7 +39,7 @@ class FatturaImporter
             if ($duplicato) {
                 return [
                     'status'     => 'duplicate',
-                    'message'    => 'Fattura già importata (hash duplicato).',
+                    'message'    => 'Fattura già importata (file identico).',
                     'id_fattura' => (int)$duplicato['id'],
                     'cedente'    => '',
                     'n_linee'    => 0,
@@ -67,6 +67,33 @@ class FatturaImporter
             $nomeFornitore = $cedente['denominazione']
                 ?? trim(($cedente['cognome'] ?? '') . ' ' . ($cedente['nome'] ?? ''))
                 ?: 'N/D';
+
+            // 4b. Controllo duplicato per numero + data + P.IVA cedente
+            foreach ($bodies as $bodyCheck) {
+                $dgCheck = $bodyCheck['dati_generali'];
+                $dupLogico = Database::fetchOne(
+                    'SELECT fe.id FROM fatture_elettroniche fe
+                     WHERE fe.id_azienda=? AND fe.id_cedente=?
+                       AND fe.numero_documento=? AND fe.data_documento=?',
+                    [
+                        $idAzienda,
+                        $idCedente,
+                        $dgCheck['numero_documento'] ?? '',
+                        $dgCheck['data_documento']   ?? '',
+                    ]
+                );
+                if ($dupLogico) {
+                    return [
+                        'status'     => 'duplicate',
+                        'message'    => 'Fattura già presente: n.' . ($dgCheck['numero_documento'] ?? '') .
+                                        ' del ' . ($dgCheck['data_documento'] ?? '') .
+                                        ' — ' . $nomeFornitore,
+                        'id_fattura' => (int)$dupLogico['id'],
+                        'cedente'    => $nomeFornitore,
+                        'n_linee'    => 0,
+                    ];
+                }
+            }
 
             $totalLinee = 0;
             $primoIdFattura = null;
