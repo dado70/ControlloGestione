@@ -254,8 +254,8 @@ $extraJs = '
             return;
         }
 
-        const badgeClass = { ok: "bg-success", duplicate: "bg-warning text-dark", error: "bg-danger" }[data.status] || "bg-secondary";
-        const badgeLbl   = { ok: "Importata", duplicate: "Duplicato", error: "Errore" }[data.status] || data.status;
+        const badgeClass = { ok: "bg-success", duplicate: "bg-warning text-dark", error: "bg-danger", rejected: "bg-danger" }[data.status] || "bg-secondary";
+        const badgeLbl   = { ok: "Importata", duplicate: "Duplicato", error: "Errore", rejected: "Bloccata" }[data.status] || data.status;
         const azione = data.id_fattura
             ? `<a href="dettaglio.php?id=${data.id_fattura}" class="btn btn-sm btn-outline-primary">Dettaglio</a>`
             : "—";

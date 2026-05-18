@@ -83,11 +83,19 @@ function navLink(string $href, string $icon, string $label, string $active, stri
   <?= navLink(APP_URL.'/public/fatture/upload.php',  'cloud-upload',     'Importa fatture',   $activePage, 'upload') ?>
   <?= navLink(APP_URL.'/public/fatture/lista.php',   'file-earmark-text','Archivio fatture',  $activePage, 'fatture') ?>
 
+  <div class="nav-section">Corrispettivi</div>
+  <?= navLink(APP_URL.'/public/corrispettivi/upload.php', 'cloud-upload',     'Importa corrisp.',  $activePage, 'corr_upload') ?>
+  <?= navLink(APP_URL.'/public/corrispettivi/lista.php',  'receipt',          'Archivio corrisp.', $activePage, 'corr_lista') ?>
+
   <div class="nav-section">Analisi</div>
   <?= navLink(APP_URL.'/public/analisi/costi_periodo.php',   'calendar3',        'Costi per periodo', $activePage, 'costi_periodo') ?>
   <?= navLink(APP_URL.'/public/analisi/costi_fornitore.php', 'shop',             'Per fornitore',     $activePage, 'costi_fornitore') ?>
   <?= navLink(APP_URL.'/public/analisi/centri_costo.php',    'diagram-3',        'Centri di costo',   $activePage, 'centri_costo') ?>
   <?= navLink(APP_URL.'/public/analisi/bilancio_cee.php',    'bar-chart-line',   'Bilancio CEE',      $activePage, 'bilancio_cee') ?>
+
+  <div class="nav-section">Budget</div>
+  <?= navLink(APP_URL.'/public/budget/index.php',      'calculator',       'Inserimento budget', $activePage, 'budget') ?>
+  <?= navLink(APP_URL.'/public/budget/confronto.php',  'bar-chart-steps',  'Budget vs Cons.',    $activePage, 'budget_confronto') ?>
 
   <?php if (Auth::isAdmin()): ?>
   <div class="nav-section">Impostazioni</div>

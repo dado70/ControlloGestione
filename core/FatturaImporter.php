@@ -61,12 +61,39 @@ class FatturaImporter
             $cedente = $header['cedente_prestatore'];
             $bodies  = $dati['body'];
 
-            // 4. Upsert cedente_prestatore
-            $idCedente = $this->upsertCedente($cedente, $idAzienda);
+            // 3b. Controllo destinatario: la fattura deve essere intestata a questa azienda
+            $cessionario = $header['cessionario_committente'];
+            $pivaFattura = preg_replace('/\s+/', '', strtoupper((string)($cessionario['id_codice'] ?? '')));
+            $cfFattura   = preg_replace('/\s+/', '', strtoupper((string)($cessionario['codice_fiscale'] ?? '')));
 
             $nomeFornitore = $cedente['denominazione']
                 ?? trim(($cedente['cognome'] ?? '') . ' ' . ($cedente['nome'] ?? ''))
                 ?: 'N/D';
+
+            if ($pivaFattura !== '') {
+                $azienda     = Database::fetchOne(
+                    'SELECT partita_iva, codice_fiscale FROM aziende WHERE id=?',
+                    [$idAzienda]
+                );
+                $pivaAzienda = preg_replace('/\s+/', '', strtoupper((string)($azienda['partita_iva'] ?? '')));
+                $cfAzienda   = preg_replace('/\s+/', '', strtoupper((string)($azienda['codice_fiscale'] ?? '')));
+
+                $matchPiva = ($pivaFattura === $pivaAzienda || $pivaFattura === $cfAzienda);
+                $matchCf   = ($cfFattura   !== '' && ($cfFattura === $pivaAzienda || $cfFattura === $cfAzienda));
+
+                if (!$matchPiva && !$matchCf) {
+                    return [
+                        'status'     => 'rejected',
+                        'message'    => "Fattura intestata a P.IVA «{$pivaFattura}» — non corrisponde all'azienda selezionata ({$pivaAzienda}). Import bloccato.",
+                        'id_fattura' => null,
+                        'cedente'    => $nomeFornitore,
+                        'n_linee'    => 0,
+                    ];
+                }
+            }
+
+            // 4. Upsert cedente_prestatore
+            $idCedente = $this->upsertCedente($cedente, $idAzienda);
 
             // 4b. Controllo duplicato per numero + data + P.IVA cedente
             foreach ($bodies as $bodyCheck) {
